@@ -314,45 +314,6 @@
     </div>
   </div>
 
-  <!-- Optional AI Connection Settings Modal (For External PWA / Custom Proxy or API Key) -->
-  <div id="ai-settings-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-pop">
-      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-        <div>
-          <span class="text-[11px] font-bold text-indigo-400 uppercase tracking-wider">AI Connection Config</span>
-          <h3 class="text-lg font-extrabold text-white">⚙️ AI 연결 설정 (선택)</h3>
-        </div>
-        <button type="button" onclick="closeAiSettingsModal()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white text-xs font-bold transition">✕ 닫기</button>
-      </div>
-
-      <div class="bg-slate-950/90 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-400 leading-relaxed">
-        💡 기본 실행 환경(Canvas 미리보기)에서는 별도 설정 없이 비워두어도 Gemini AI 세부 평가가 자동으로 동작합니다. 추후 GitHub Pages 등 외부 PWA로 분리 배포할 때만 아래 중 하나를 입력하세요.
-      </div>
-
-      <div class="space-y-3 text-xs">
-        <div>
-          <label class="text-slate-300 block mb-1 font-bold">Apps Script 프록시 URL (외부 배포 추천)</label>
-          <input id="ai-proxy-url-input" type="url" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:border-indigo-500 focus:outline-none" placeholder="https://script.google.com/macros/s/.../exec">
-          <p class="text-[11px] text-slate-500 mt-1">프록시 URL을 설정하면 API 키를 노출하지 않고 안전하게 호출합니다.</p>
-        </div>
-
-        <div>
-          <label class="text-slate-300 block mb-1 font-bold">사용자 Gemini API Key (개인 테스트용)</label>
-          <input id="ai-api-key-input" type="password" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:border-indigo-500 focus:outline-none" placeholder="비워두면 기본 내장 환경으로 호출">
-          <p class="text-[11px] text-slate-500 mt-1">이 브라우저의 로컬 저장소에만 보관되며 JSON 백업 파일에는 포함되지 않습니다.</p>
-        </div>
-      </div>
-
-      <div class="flex justify-between items-center pt-3 border-t border-slate-800 gap-2">
-        <button type="button" onclick="resetAiSettings()" class="px-3 py-2 bg-slate-800 hover:bg-rose-600/80 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition">초기화</button>
-        <div class="flex gap-2">
-          <button type="button" onclick="closeAiSettingsModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition">취소</button>
-          <button type="button" onclick="saveAiSettings()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-indigo-600/30 transition">💾 설정 저장</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- PWA App Install Guide Modal (Auto-detects iOS / Android / PC / In-App Browser) -->
   <div id="pwa-install-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-indigo-500/40 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-pop">
@@ -689,21 +650,13 @@
           <div id="ai-eval-section" class="bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950/50 p-5 sm:p-6 rounded-2xl border border-indigo-500/35 shadow-xl space-y-4">
             <div class="flex flex-wrap justify-between items-center gap-3 border-b border-slate-800/90 pb-3.5">
               <div>
-                <div class="flex items-center gap-2">
-                  <span class="text-[11px] font-bold text-indigo-400 uppercase tracking-wider">Gemini AI Deep Coaching</span>
-                  <span id="ai-mode-badge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Gemini 연동</span>
-                </div>
+                <span class="text-[11px] font-bold text-indigo-400 uppercase tracking-wider">Gemini AI Deep Coaching</span>
                 <h2 class="text-lg font-extrabold text-white mt-0.5">✨ AI 세부 평가</h2>
               </div>
 
-              <div class="flex items-center gap-2">
-                <button type="button" onclick="openAiSettingsModal()" class="px-2.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-bold border border-slate-700 transition" title="외부 배포용 AI 연결 설정 (선택)">
-                  ⚙️ AI 연결 설정
-                </button>
-                <button type="button" id="btn-run-ai-eval" onclick="requestAiDetailedEvaluation()" class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white rounded-xl text-xs sm:text-sm font-extrabold shadow-lg shadow-indigo-600/25 transition flex items-center gap-1.5 whitespace-nowrap">
-                  <span>✨ AI 세부 평가 받기</span>
-                </button>
-              </div>
+              <button type="button" id="btn-run-ai-eval" onclick="requestAiDetailedEvaluation()" class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white rounded-xl text-xs sm:text-sm font-extrabold shadow-lg shadow-indigo-600/25 transition flex items-center gap-1.5 whitespace-nowrap">
+                <span>✨ AI 세부 평가 받기</span>
+              </button>
             </div>
 
             <!-- Stale Plan Warning Banner (Appears when sliders/records change after AI evaluation) -->
@@ -842,13 +795,14 @@
   </main>
 
   <!-- Subtle App Footer (Install guide button auto-hides in installed PWA mode) -->
-  <footer class="max-w-6xl mx-auto px-4 mt-10 pt-5 border-t border-slate-800/70 flex flex-col sm:flex-row justify-between items-center gap-3 text-[11px] text-slate-500">
-    <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-      <span class="font-bold text-slate-400">레이스 플래너 (Race Planner)</span>
-      <span>·</span>
-      <span id="pwa-status-text">모든 기록은 이 기기에 개별 저장됩니다</span>
+  <footer class="max-w-6xl mx-auto px-4 mt-10 pt-5 border-t border-slate-800/70 flex flex-col sm:flex-row justify-between items-center gap-2.5 text-[11px] text-slate-500">
+    <div class="flex flex-wrap items-center justify-center sm:justify-start gap-x-2 gap-y-1 text-center sm:text-left">
+      <span class="font-bold text-slate-300">레이스 플래너 (Race Planner)</span>
+      <span class="text-slate-600">·</span>
+      <span class="text-slate-400 font-medium">© 2026 <strong class="text-indigo-300 font-bold">rockjin</strong>. All rights reserved.</span>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center justify-center sm:justify-end gap-2">
+      <span id="pwa-status-text" class="text-slate-500">모든 기록은 이 기기에 개별 저장됩니다</span>
       <button type="button" id="btn-pwa-install-footer" onclick="openPwaInstallFlow()" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-indigo-300 border border-slate-800 font-semibold transition">
         📲 설치 안내
       </button>
@@ -860,7 +814,8 @@
     // 1. CONSTANTS & CLEAN DEFAULT STATE (ZERO PERSONAL DATA)
     // =====================================================
     const STORAGE_KEY = "RACE_PLANNER_V2";
-    const AI_CONFIG_STORAGE_KEY = "RACE_PLANNER_AI_CONFIG";
+    // 외부 배포(GitHub Pages)에서 Gemini AI를 연결할 때 Apps Script 웹 앱 URL을 아래 따옴표 안에 붙여넣으세요.
+    const AI_PROXY_URL = "";
     const MIN_PACE_SEC = 180; // 3'00"/km
     const MAX_PACE_SEC = 450; // 7'30"/km
     const MAX_SEGMENTS = 10;  // Up to 10 segments for Full Marathon planning
@@ -904,10 +859,6 @@
     // AI Evaluation state tracking
     let hasAiEvaluationResult = false;
     let isAiEvaluating = false;
-    let aiConfig = {
-      proxyUrl: "",
-      apiKey: ""
-    };
 
     // Custom Calendar Popup state
     let activeCalendarInput = null;
@@ -1269,7 +1220,6 @@
         closeCalendarPopup();
         closeDdayModal();
         closeRaceEditModal();
-        closeAiSettingsModal();
         closePwaInstallModal();
       }
     });
@@ -1559,13 +1509,40 @@
       if (dist === 21.0975) return [5.0, 10.0, 6.0975];
       if (dist === 42.195) return [11.0, 19.0, 12.195];
       if (dist === 10) return [3.0, 4.0, 3.0];
-      if (dist === 5) return [1.5, 2.0, 1.5];
+      if (dist === 5) return [1.0, 2.0, 2.0];
       const d1 = Math.max(1, Math.round(dist * 0.25));
       const d2 = Math.max(1, Math.round(dist * 0.45));
       return [d1, d2, +(dist - d1 - d2).toFixed(4)];
     }
 
-    // Target Finish Time Reverse Calculator: Exact-Second Matching for Even / Negative / Positive
+    // Ensure non-last segment distances stay clean integer km (last segment absorbs official decimal like .0975 / .195)
+    function normalizeSegmentDistancesToInteger() {
+      const N = segments.length;
+      if (N <= 1) {
+        segments[0].dist = currentRaceDist;
+        return false;
+      }
+      if (currentRaceDist < N) return false; // Safeguard if e.g. 5K is split into 6+ segments
+
+      let changed = false;
+      let sum = 0;
+      for (let i = 0; i < N - 1; i++) {
+        const remainCount = N - 1 - i;
+        const maxInt = Math.max(1, Math.floor(currentRaceDist - sum - remainCount));
+        let rounded = Math.round(segments[i].dist);
+        if (rounded < 1) rounded = 1;
+        if (rounded > maxInt) rounded = maxInt;
+        if (Math.abs(segments[i].dist - rounded) > 0.001) changed = true;
+        segments[i].dist = rounded;
+        sum += rounded;
+      }
+      const lastDist = +(currentRaceDist - sum).toFixed(4);
+      if (Math.abs(segments[N - 1].dist - lastDist) > 0.001) changed = true;
+      segments[N - 1].dist = lastDist;
+      return changed;
+    }
+
+    // Target Finish Time Reverse Calculator: Integer-km distances & 1-sec paces, projected time <= target time
     function applyReverseTargetTime(mode = 'even') {
       const inputEl = document.getElementById('sim-reverse-time-input');
       if (!inputEl) return;
@@ -1583,35 +1560,55 @@
 
       const targetTimeLabel = formatTimeCompact(targetSec);
 
-      // 1. Exact-Second Even Split (preserves current segment distances, allows 0.1s precision display)
+      // 1. Even Split (Integer-km distances + single integer-second pace <= target time)
       if (mode === 'even') {
-        segments.forEach(s => { s.paceSec = avgPaceSec; });
-        const exactPaceLabel = formatPace(avgPaceSec);
-        if (Math.abs(avgPaceSec - Math.round(avgPaceSec)) >= 0.05) {
-          setReverseFitNote(`✓ 목표 시간(${targetTimeLabel})에 1초 오차 없이 맞추기 위해 전 구간 페이스를 ${exactPaceLabel}/km로 정밀 설정했습니다.`);
-        } else {
-          setReverseFitNote(`✓ 목표 시간(${targetTimeLabel})에 정확히 맞춰 전 구간 ${exactPaceLabel}/km 이븐 스플릿으로 설정했습니다.`);
+        const distNormalized = normalizeSegmentDistancesToInteger();
+        let evenPace = Math.floor(targetSec / currentRaceDist);
+        evenPace = Math.max(MIN_PACE_SEC, Math.min(MAX_PACE_SEC, evenPace));
+        while (evenPace < MAX_PACE_SEC && Math.round((evenPace + 1) * currentRaceDist) <= targetSec) {
+          evenPace += 1;
         }
+        while (evenPace > MIN_PACE_SEC && Math.round(evenPace * currentRaceDist) > targetSec) {
+          evenPace -= 1;
+        }
+
+        segments.forEach(s => { s.paceSec = evenPace; });
+        const actualSec = Math.round(evenPace * currentRaceDist);
+        const actualTimeLabel = formatTimeCompact(actualSec);
+        const marginSec = targetSec - actualSec;
+        const paceLabel = formatPace(evenPace);
+        const distPrefix = distNormalized ? "구간 거리를 정수 km로 정리하고 " : "구간 거리를 정수 km로 유지한 채 ";
+
+        if (marginSec === 0) {
+          setReverseFitNote(`✓ ${distPrefix}전 구간 ${paceLabel}/km 이븐 스플릿으로 목표 기록(${targetTimeLabel})에 정확히 맞췄습니다.`);
+          showToast(`목표 시간(${targetTimeLabel})에 딱 맞는 ${paceLabel}/km 이븐 스플릿 적용 완료!`, "⚖️");
+        } else {
+          setReverseFitNote(`✓ ${distPrefix}1초 단위 페이스(${paceLabel}/km)를 적용해 목표 기록(${targetTimeLabel})을 넘기지 않도록, 예상 기록을 ${actualTimeLabel}(목표보다 ${marginSec}초 빠르게)로 최적화했습니다.`);
+          showToast(`이븐 스플릿 적용! 예상 ${actualTimeLabel} (목표보다 ${marginSec}초 여유)`, "⚖️");
+        }
+
         markAiEvaluationStale();
         renderSimulator();
-        showToast(`목표 시간(${targetTimeLabel})에 정확히 맞춰 전 구간 ${exactPaceLabel}/km 이븐 스플릿으로 세팅했습니다!`, "⚖️");
         return;
       }
 
-      // 2. Exact-Second Negative / Positive Split
+      // 2. Negative / Positive Split (Integer-km distances + monotonic integer-second paces <= target time)
       let autoSplitMsg = "";
       if (segments.length === 1) {
         const dists3 = buildThreeSplitDistances(currentRaceDist);
-        segments = dists3.map(d => ({ dist: d, paceSec: Math.round(avgPaceSec) }));
+        segments = dists3.map(d => ({ dist: d, paceSec: Math.floor(avgPaceSec) }));
         autoSplitMsg = " (자동 3분할 적용)";
       }
 
+      const distNormalized = normalizeSegmentDistancesToInteger();
       const N = segments.length;
+      const dists = segments.map(s => s.dist);
       const baseSpread = currentRaceDist >= 40 ? 3 : currentRaceDist >= 20 ? 3 : 2;
       const halfSpread = N > 5 ? Math.min(4, baseSpread + 1) : baseSpread;
+      const maxAllowedSpread = Math.min(14, Math.max(8, N * 2));
 
-      const calcTotal = (dArr, pArr) => dArr.reduce((acc, d, idx) => acc + d * pArr[idx], 0);
-      const isMonotonicValid = (pArr) => {
+      const calcTotal = (pArr) => dists.reduce((acc, d, idx) => acc + d * pArr[idx], 0);
+      const isMonotonicValid = (pArr, requiredMinSpread = 2) => {
         for (let i = 0; i < N; i++) {
           if (pArr[i] < MIN_PACE_SEC || pArr[i] > MAX_PACE_SEC) return false;
         }
@@ -1619,16 +1616,18 @@
           for (let i = 0; i < N - 1; i++) {
             if (pArr[i] < pArr[i + 1]) return false;
           }
-          return pArr[0] > pArr[N - 1];
+          const spread = pArr[0] - pArr[N - 1];
+          return spread >= requiredMinSpread && spread <= maxAllowedSpread;
         } else {
           for (let i = 0; i < N - 1; i++) {
             if (pArr[i] > pArr[i + 1]) return false;
           }
-          return pArr[0] < pArr[N - 1];
+          const spread = pArr[N - 1] - pArr[0];
+          return spread >= requiredMinSpread && spread <= maxAllowedSpread;
         }
       };
 
-      // Generate initial monotonic integer paces
+      // Generate initial monotonic integer-second paces
       const paces = segments.map((_, idx) => {
         const factor = 1 - (2 * idx) / (N - 1); // +1 at start, -1 at end
         const raw = mode === 'negative'
@@ -1637,158 +1636,122 @@
         return Math.max(MIN_PACE_SEC, Math.min(MAX_PACE_SEC, Math.round(raw)));
       });
 
-      // Guarantee strict overall negative/positive direction if rounding collapsed endpoints
-      if (paces[0] === paces[N - 1]) {
+      // Guarantee meaningful negative/positive spread (>= 2s)
+      if (Math.abs(paces[0] - paces[N - 1]) < 2) {
         if (mode === 'negative') {
           if (paces[0] < MAX_PACE_SEC) paces[0] += 1;
-          else if (paces[N - 1] > MIN_PACE_SEC) paces[N - 1] -= 1;
+          if (paces[N - 1] > MIN_PACE_SEC) paces[N - 1] -= 1;
         } else {
           if (paces[0] > MIN_PACE_SEC) paces[0] -= 1;
-          else if (paces[N - 1] < MAX_PACE_SEC) paces[N - 1] += 1;
+          if (paces[N - 1] < MAX_PACE_SEC) paces[N - 1] += 1;
         }
       }
 
-      const dists = segments.map(s => s.dist);
-
-      // Phase 1: Monotonic Integer-Pace Greedy Refinement (keeping current distances)
-      let iter = 0;
-      while (iter++ < 120) {
-        const curTotal = calcTotal(dists, paces);
-        if (Math.round(curTotal) === targetSec) break;
-
-        const curErr = Math.abs(curTotal - targetSec);
-        const dir = curTotal < targetSec ? 1 : -1;
-        let bestIdx = -1;
-        let bestErr = curErr;
+      // Phase 1: Ensure projected time never exceeds targetSec (Math.round(total) <= targetSec)
+      let guard = 0;
+      while (Math.round(calcTotal(paces)) > targetSec && guard++ < 150) {
+        let bestBelowIdx = -1;
+        let bestBelowTotal = -Infinity;
+        let bestAboveIdx = -1;
+        let bestAboveTotal = Infinity;
 
         for (let i = 0; i < N; i++) {
-          const candidate = paces.slice();
-          candidate[i] += dir;
-          if (!isMonotonicValid(candidate)) continue;
-          const err = Math.abs(calcTotal(dists, candidate) - targetSec);
-          if (err < bestErr - 1e-9) {
-            bestErr = err;
-            bestIdx = i;
+          const cand = paces.slice();
+          cand[i] -= 1;
+          if (!isMonotonicValid(cand, 1)) continue;
+          const t = calcTotal(cand);
+          if (Math.round(t) <= targetSec) {
+            if (t > bestBelowTotal) {
+              bestBelowTotal = t;
+              bestBelowIdx = i;
+            }
+          } else if (t < bestAboveTotal) {
+            bestAboveTotal = t;
+            bestAboveIdx = i;
           }
         }
 
-        if (bestIdx === -1) break;
-        paces[bestIdx] += dir;
+        if (bestBelowIdx !== -1) {
+          paces[bestBelowIdx] -= 1;
+          break;
+        } else if (bestAboveIdx !== -1) {
+          paces[bestAboveIdx] -= 1;
+        } else if (Math.min(...paces) > MIN_PACE_SEC) {
+          for (let i = 0; i < N; i++) paces[i] -= 1;
+        } else {
+          break;
+        }
       }
 
-      // Phase 2: Fine Segment Boundary Distance Optimization (preserving clean integer paces)
-      let boundaryDeltaApplied = 0;
-      if (Math.round(calcTotal(dists, paces)) !== targetSec) {
-        const granularities = [
-          { step: 0.5, maxShift: 5.0 },
-          { step: 0.1, maxShift: 3.0 },
-          { step: 0.05, maxShift: 3.0 }
-        ];
+      // Phase 2: Bring projected time as close to targetSec as possible from below (without exceeding targetSec)
+      let iter = 0;
+      while (iter++ < 150) {
+        const curTotal = calcTotal(paces);
+        if (Math.round(curTotal) === targetSec) break;
 
-        let bestMove = null;
+        let bestCand = null;
+        let bestTotal = curTotal;
+        let bestMoveCost = 99;
 
-        for (const { step, maxShift } of granularities) {
-          const maxSteps = Math.round(maxShift / step);
-          for (let i = 0; i < N; i++) {
-            for (let j = 0; j < N; j++) {
-              if (i === j || paces[i] === paces[j]) continue;
+        // Try single-segment +1s increment
+        for (let i = 0; i < N; i++) {
+          const cand = paces.slice();
+          cand[i] += 1;
+          if (!isMonotonicValid(cand, 2)) continue;
+          const t = calcTotal(cand);
+          if (Math.round(t) <= targetSec && t > bestTotal + 1e-9) {
+            bestTotal = t;
+            bestCand = cand;
+            bestMoveCost = 1;
+          }
+        }
 
-              for (let k = 1; k <= maxSteps; k++) {
-                const delta = +(k * step).toFixed(4);
-                if (dists[j] - delta < 0.5 || dists[i] + delta < 0.5) continue;
-
-                const testDists = dists.slice();
-                testDists[i] = +(testDists[i] + delta).toFixed(2);
-                testDists[j] = +(testDists[j] - delta).toFixed(2);
-
-                // Keep non-last distances cleanly rounded and assign exact remainder to last segment
-                let nonLastSum = 0;
-                let validBounds = true;
-                for (let m = 0; m < N - 1; m++) {
-                  testDists[m] = +testDists[m].toFixed(2);
-                  if (testDists[m] < 0.5) { validBounds = false; break; }
-                  nonLastSum += testDists[m];
-                }
-                if (!validBounds) continue;
-                const lastDist = +(currentRaceDist - nonLastSum).toFixed(4);
-                if (lastDist < 0.5) continue;
-                testDists[N - 1] = lastDist;
-
-                const newTotal = calcTotal(testDists, paces);
-                if (Math.round(newTotal) === targetSec) {
-                  let roughCount = 0;
-                  for (let m = 0; m < N - 1; m++) {
-                    const modHalf = Math.abs(testDists[m] * 2 - Math.round(testDists[m] * 2));
-                    const modInt = Math.abs(testDists[m] - Math.round(testDists[m]));
-                    if (modHalf > 0.01) roughCount += 2;
-                    else if (modInt > 0.01) roughCount += 1;
-                  }
-                  const err = Math.abs(newTotal - targetSec);
-
-                  const isBetter = !bestMove ||
-                    delta < bestMove.delta - 1e-6 ||
-                    (Math.abs(delta - bestMove.delta) <= 1e-6 && roughCount < bestMove.roughCount) ||
-                    (Math.abs(delta - bestMove.delta) <= 1e-6 && roughCount === bestMove.roughCount && err < bestMove.err);
-
-                  if (isBetter) {
-                    bestMove = { delta, roughCount, err, dists: testDists };
-                  }
-                }
-              }
+        // Try pairwise (+1s, -1s) swap to close remaining few-second gap cleanly
+        for (let i = 0; i < N; i++) {
+          for (let j = 0; j < N; j++) {
+            if (i === j) continue;
+            const cand = paces.slice();
+            cand[i] += 1;
+            cand[j] -= 1;
+            if (!isMonotonicValid(cand, 2)) continue;
+            const t = calcTotal(cand);
+            if (Math.round(t) <= targetSec && (t > bestTotal + 1e-9 || (Math.abs(t - bestTotal) <= 1e-9 && bestMoveCost > 2))) {
+              bestTotal = t;
+              bestCand = cand;
+              bestMoveCost = 2;
             }
           }
-          if (bestMove) break;
         }
 
-        if (bestMove) {
-          for (let m = 0; m < N; m++) dists[m] = bestMove.dists[m];
-          boundaryDeltaApplied = bestMove.delta;
-        }
+        if (!bestCand) break;
+        for (let i = 0; i < N; i++) paces[i] = bestCand[i];
       }
 
-      // Phase 3: Exact Residual Guarantee Fallback
-      let usedFractionalFallback = false;
-      let residualTotal = calcTotal(dists, paces);
-      if (Math.round(residualTotal) !== targetSec) {
-        const lastAdj = (targetSec - residualTotal) / dists[N - 1];
-        const candidateLast = paces[N - 1] + lastAdj;
-        if (candidateLast >= MIN_PACE_SEC && candidateLast <= MAX_PACE_SEC) {
-          paces[N - 1] = candidateLast;
-          usedFractionalFallback = true;
-        } else {
-          const evenShift = (targetSec - residualTotal) / currentRaceDist;
-          for (let m = 0; m < N; m++) {
-            paces[m] = Math.max(MIN_PACE_SEC, Math.min(MAX_PACE_SEC, paces[m] + evenShift));
-          }
-          usedFractionalFallback = true;
-        }
-      }
-
-      // Commit exact-second distances and paces
-      let sumOthers = 0;
-      for (let m = 0; m < N - 1; m++) {
-        segments[m].dist = +dists[m].toFixed(2);
+      // Commit clean integer paces while keeping integer-km distances untouched
+      for (let m = 0; m < N; m++) {
         segments[m].paceSec = paces[m];
-        sumOthers += segments[m].dist;
       }
-      segments[N - 1].dist = +(currentRaceDist - sumOthers).toFixed(4);
-      segments[N - 1].paceSec = paces[N - 1];
 
+      const actualSec = Math.round(calcTotal(paces));
+      const actualTimeLabel = formatTimeCompact(actualSec);
+      const marginSec = targetSec - actualSec;
       const modeName = mode === 'negative' ? '네거티브' : '포지티브';
       const modeIcon = mode === 'negative' ? '📈' : '📉';
+      const distPrefix = distNormalized ? "구간 거리를 정수 km로 정리하고 " : "구간 거리를 정수 km로 유지한 채 ";
 
-      if (boundaryDeltaApplied > 0) {
-        const deltaStr = boundaryDeltaApplied.toFixed(2).replace(/\.?0+$/, '');
-        setReverseFitNote(`✓ 정수 초 페이스를 유지하면서 목표 시간(${targetTimeLabel})에 정확히 맞추기 위해 구간 경계 거리를 ±${deltaStr}km 미세 조정했습니다.`);
-      } else if (usedFractionalFallback) {
-        setReverseFitNote(`✓ 목표 시간(${targetTimeLabel})에 1초 오차 없이 맞추기 위해 마지막 구간 페이스를 ${formatPace(segments[N - 1].paceSec)}/km로 정밀 조정했습니다.`);
+      if (marginSec === 0) {
+        setReverseFitNote(`✓ ${distPrefix}1초 단위 ${modeName} 스플릿으로 목표 기록(${targetTimeLabel})에 정확히 맞췄습니다.`);
+        showToast(`목표 시간(${targetTimeLabel})에 딱 맞는 ${modeName} 스플릿 적용 완료!${autoSplitMsg}`, modeIcon);
+      } else if (marginSec > 0) {
+        setReverseFitNote(`✓ ${distPrefix}1초 단위 페이스를 적용해 목표 기록(${targetTimeLabel})을 넘기지 않도록, 예상 기록을 ${actualTimeLabel}(목표보다 ${marginSec}초 빠르게)로 최적화했습니다.`);
+        showToast(`${modeName} 스플릿 적용! 예상 ${actualTimeLabel} (목표보다 ${marginSec}초 여유)${autoSplitMsg}`, modeIcon);
       } else {
-        setReverseFitNote(`✓ 기존 구간 거리를 유지한 채 목표 시간(${targetTimeLabel})에 1초 오차 없이 ${modeName} 스플릿을 맞췄습니다.`);
+        setReverseFitNote(`✓ 시뮬레이터 최저 페이스(3'00"/km) 제한 범위 내에서 ${modeName} 스플릿을 적용했습니다.`);
+        showToast(`${modeName} 스플릿이 적용되었습니다.${autoSplitMsg}`, modeIcon);
       }
 
       markAiEvaluationStale();
       renderSimulator();
-      showToast(`목표 시간(${targetTimeLabel})에 1초 오차 없이 ${modeName} 스플릿을 자동 완성했습니다!${autoSplitMsg}`, modeIcon);
     }
 
     function applyPreset(type) {
@@ -2565,61 +2528,19 @@
     // =====================================================
     // 9. AI DETAILED EVALUATION SECTION (GEMINI + FALLBACK)
     // =====================================================
-    function updateAiModeBadge() {
-      const badge = document.getElementById('ai-mode-badge');
-      if (!badge) return;
-      if (aiConfig.proxyUrl) {
-        badge.innerText = "프록시 연동";
-        badge.classList.remove('hidden');
-      } else if (aiConfig.apiKey) {
-        badge.innerText = "API Key 연동";
-        badge.classList.remove('hidden');
-      } else {
-        badge.classList.add('hidden');
-      }
-    }
-
-    function openAiSettingsModal() {
-      document.getElementById('ai-proxy-url-input').value = aiConfig.proxyUrl || '';
-      document.getElementById('ai-api-key-input').value = aiConfig.apiKey || '';
-      document.getElementById('ai-settings-modal').classList.remove('hidden');
-    }
-
-    function closeAiSettingsModal() {
-      document.getElementById('ai-settings-modal').classList.add('hidden');
-    }
-
-    function saveAiSettings() {
-      aiConfig.proxyUrl = document.getElementById('ai-proxy-url-input').value.trim();
-      aiConfig.apiKey = document.getElementById('ai-api-key-input').value.trim();
-      try {
-        localStorage.setItem(AI_CONFIG_STORAGE_KEY, JSON.stringify(aiConfig));
-      } catch (e) {}
-      updateAiModeBadge();
-      closeAiSettingsModal();
-      showToast("AI 연결 설정이 저장되었습니다!", "⚙️");
-    }
-
-    function resetAiSettings() {
-      aiConfig = { proxyUrl: "", apiKey: "" };
-      try {
-        localStorage.removeItem(AI_CONFIG_STORAGE_KEY);
-      } catch (e) {}
-      updateAiModeBadge();
-      closeAiSettingsModal();
-      showToast("AI 연결 설정이 기본값으로 초기화되었습니다.", "🔄");
-    }
-
-    function loadAiSettings() {
-      try {
-        const raw = localStorage.getItem(AI_CONFIG_STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          aiConfig.proxyUrl = parsed.proxyUrl || "";
-          aiConfig.apiKey = parsed.apiKey || "";
+    async function fetchWithBackoff(url, options, maxRetries = 3) {
+      let delay = 1000;
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        const res = await fetch(url, options);
+        if (res.ok) return res;
+        if ((res.status === 429 || res.status >= 500) && attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2;
+          continue;
         }
-      } catch (e) {}
-      updateAiModeBadge();
+        throw new Error(`HTTP ${res.status}`);
+      }
+      throw new Error("Max retries reached");
     }
 
     function buildAiEvaluationPrompt() {
@@ -2699,7 +2620,7 @@ ${recordLines}
         ? `전반 1구간 페이스를 지금보다 3~5초 늦춘 ${formatPace(Math.min(MAX_PACE_SEC, segments[0].paceSec + 4))}/km로 출발하고, 후반 컨디션이 남을 때 가속하는 네거티브 전략으로 수정해 보세요. 보급은 ${gelPoint} 지점에 맞춰 미리 챙기는 것이 안전합니다.`
         : `현재 구간 배분을 유지하되 5K 체크포인트(${formatTimeCompact(getElapsedTimeAtKm(Math.min(5, currentRaceDist)))}) 통과 시 호흡이 편안한지 반드시 점검하세요. 에너지젤·수분은 ${gelPoint} 지점에서 목마르기 전에 선제 보급하는 것을 권장합니다.`;
 
-      return { headline, realism, risk, action, sourceLabel: "내장 정밀 분석 리포트 (오프라인 대체)" };
+      return { headline, realism, risk, action, sourceLabel: "내장 정밀 분석 리포트 (오프라인/미연동 대체)" };
     }
 
     function renderAiEvaluationCards(result) {
@@ -2760,7 +2681,7 @@ ${recordLines}
       if (btn) {
         btn.disabled = true;
         btn.classList.add('opacity-60', 'cursor-wait');
-        btn.innerHTML = `<span>⏳ AI 정밀 분석 중...</span>`;
+        btn.innerHTML = `<span>⏳ Gemini AI 분석 중...</span>`;
       }
 
       const staleBanner = document.getElementById('ai-stale-banner');
@@ -2768,7 +2689,7 @@ ${recordLines}
 
       body.innerHTML = `
         <div class="bg-slate-950/80 border border-indigo-500/30 rounded-xl p-5 space-y-2.5 animate-pulse">
-          <div class="text-xs font-bold text-indigo-300">🤖 누적된 대회 기록 ${raceHistory.length}건과 ${segments.length}개 구간 스플릿을 정밀 대조하고 있습니다...</div>
+          <div class="text-xs font-bold text-indigo-300">🤖 누적된 대회 기록 ${raceHistory.length}건과 ${segments.length}개 구간 스플릿을 Gemini AI가 정밀 분석하고 있습니다...</div>
           <div class="h-3 bg-slate-800 rounded w-3/4"></div>
           <div class="h-3 bg-slate-800 rounded w-full"></div>
           <div class="h-3 bg-slate-800 rounded w-5/6"></div>
@@ -2779,30 +2700,39 @@ ${recordLines}
 
       try {
         let rawText = "";
-        let sourceLabel = "✨ Gemini 2.5 Flash 실시간 분석";
+        let sourceLabel = "✨ Gemini AI 실시간 분석";
 
-        if (aiConfig.proxyUrl) {
-          sourceLabel = "✨ Gemini AI (프록시 연동)";
-          const res = await fetch(aiConfig.proxyUrl, {
+        if (AI_PROXY_URL) {
+          const res = await fetchWithBackoff(AI_PROXY_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'evaluate_plan', prompt })
+            body: JSON.stringify({ prompt })
           });
-          if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
           const data = await res.json();
           rawText = data.text || data.reply || data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
         } else {
-          const apiKey = aiConfig.apiKey || "";
-          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
-          const res = await fetch(apiUrl, {
+          const apiKey = "";
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+          const res = await fetchWithBackoff(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { responseMimeType: "application/json" }
+              generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                  type: "OBJECT",
+                  properties: {
+                    headline: { type: "STRING" },
+                    realism: { type: "STRING" },
+                    risk: { type: "STRING" },
+                    action: { type: "STRING" }
+                  },
+                  required: ["headline", "realism", "risk", "action"]
+                }
+              }
             })
           });
-          if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
           const data = await res.json();
           rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
         }
@@ -2821,9 +2751,9 @@ ${recordLines}
           action: parsed.action,
           sourceLabel
         });
-        showToast("AI 세부 평가 리포트가 생성되었습니다!", "✨");
+        showToast("Gemini AI 세부 평가 리포트가 생성되었습니다!", "✨");
       } catch (err) {
-        // Graceful offline/keyless fallback
+        // Graceful fallback when offline or before AI_PROXY_URL is connected on GitHub Pages
         const fallback = buildBuiltInDetailedFallback();
         hasAiEvaluationResult = true;
         renderAiEvaluationCards(fallback);
@@ -3541,7 +3471,6 @@ ${recordLines}
     // =====================================================
     window.onload = function() {
       initCalendarSelects();
-      loadAiSettings();
       loadStateFromLocalStorage();
       initPwaSystem();
 
