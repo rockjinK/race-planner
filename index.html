@@ -1,0 +1,3561 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0f19">
+  <meta name="description" content="구간별 마라톤 페이스 시뮬레이터 & 내 대회 기록 기반 레이스 전략 평가 PWA 앱">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="레이스 플래너">
+  <link id="pwa-manifest-link" rel="manifest" href="./manifest.json">
+  <link id="pwa-favicon" rel="icon" type="image/png" href="./icon-192.png">
+  <link id="pwa-apple-icon" rel="apple-touch-icon" href="./icon-192.png">
+  <title>레이스 플래너 (Race Planner) - 구간별 페이스 시뮬레이터</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      background-color: #0b0f19;
+      color: #f1f5f9;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Ultra-Smooth Custom Range Slider with Mobile Touch Scroll Protection */
+    input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 10px;
+      background: #1e293b;
+      border-radius: 999px;
+      outline: none;
+      transition: background 0.15s ease;
+      touch-action: pan-y; /* Prevent accidental value changes during mobile vertical scroll */
+      pointer-events: none; /* Prevent unwanted jump when tapping empty track */
+    }
+    input[type=range]:hover {
+      background: #334155;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #6366f1;
+      border: 3px solid #e0e7ff;
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.7);
+      cursor: grab;
+      transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.15s ease, box-shadow 0.15s ease;
+      pointer-events: auto; /* Only allow dragging directly on the thumb */
+    }
+    input[type=range]::-webkit-slider-thumb:active {
+      cursor: grabbing;
+      transform: scale(1.22);
+    }
+    input[type=range]::-moz-range-thumb {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #6366f1;
+      border: 3px solid #e0e7ff;
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.7);
+      cursor: grab;
+      transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.15s ease, box-shadow 0.15s ease;
+      pointer-events: auto;
+    }
+    input[type=range].snapped-thumb::-webkit-slider-thumb {
+      background: #f59e0b !important;
+      border-color: #fef3c7 !important;
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.95) !important;
+      transform: scale(1.25);
+    }
+    input[type=range].snapped-thumb::-moz-range-thumb {
+      background: #f59e0b !important;
+      border-color: #fef3c7 !important;
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.95) !important;
+      transform: scale(1.25);
+    }
+    input[type=range].pace-slider::-webkit-slider-thumb {
+      background: #10b981;
+      border-color: #d1fae5;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.7);
+    }
+    input[type=range].pace-slider::-moz-range-thumb {
+      background: #10b981;
+      border-color: #d1fae5;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.7);
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 999px;
+    }
+
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.96) translateY(8px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .animate-pop {
+      animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes highlightRing {
+      0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.85); border-color: #818cf8; }
+      50% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0.2); border-color: #a5b4fc; }
+      100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); border-color: #1e293b; }
+    }
+    .animate-highlight {
+      animation: highlightRing 1.3s ease-out;
+    }
+
+    /* PWA Standalone Safe-Area Support (Notch / Home Bar Devices) */
+    .pwa-safe-top {
+      padding-top: env(safe-area-inset-top, 0px);
+    }
+    .pwa-safe-bottom {
+      padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+    }
+  </style>
+</head>
+<body class="min-h-screen pwa-safe-bottom selection:bg-indigo-500/30 selection:text-indigo-200">
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed top-5 right-5 z-[70] hidden transform transition-all duration-300 bg-indigo-600 text-white px-4 py-3 rounded-xl shadow-2xl border border-indigo-400/40 flex items-center gap-3 text-sm font-semibold">
+    <span id="toast-icon">✅</span>
+    <span id="toast-msg">저장되었습니다.</span>
+  </div>
+
+  <!-- Custom Dark Calendar Popup -->
+  <div id="custom-calendar-popup" class="fixed z-[60] hidden w-72 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl shadow-black/70 p-3.5 text-xs select-none animate-pop">
+    <!-- Calendar Header Controls -->
+    <div class="flex items-center justify-between gap-1.5 pb-2.5 border-b border-slate-800">
+      <button type="button" onclick="shiftCalendarMonth(-1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white font-bold flex items-center justify-center transition" title="이전 달">
+        ◀
+      </button>
+      <div class="flex items-center gap-1.5 flex-1 justify-center">
+        <select id="cal-year-select" onchange="onCalendarDropdownChange()" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs font-extrabold text-white focus:border-indigo-500 focus:outline-none cursor-pointer"></select>
+        <select id="cal-month-select" onchange="onCalendarDropdownChange()" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs font-extrabold text-white focus:border-indigo-500 focus:outline-none cursor-pointer"></select>
+      </div>
+      <button type="button" onclick="shiftCalendarMonth(1)" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white font-bold flex items-center justify-center transition" title="다음 달">
+        ▶
+      </button>
+    </div>
+
+    <!-- Weekday Labels -->
+    <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold py-2">
+      <span class="text-rose-400">일</span>
+      <span class="text-slate-400">월</span>
+      <span class="text-slate-400">화</span>
+      <span class="text-slate-400">수</span>
+      <span class="text-slate-400">목</span>
+      <span class="text-slate-400">금</span>
+      <span class="text-sky-400">토</span>
+    </div>
+
+    <!-- Day Grid -->
+    <div id="cal-days-grid" class="grid grid-cols-7 gap-1 text-center"></div>
+
+    <!-- Calendar Footer -->
+    <div class="flex items-center justify-between pt-2.5 mt-2 border-t border-slate-800">
+      <button type="button" onclick="selectCalendarToday()" class="px-3 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-600 text-indigo-300 hover:text-white font-extrabold border border-indigo-500/30 transition">
+        오늘
+      </button>
+      <button type="button" onclick="closeCalendarPopup()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition">
+        닫기
+      </button>
+    </div>
+  </div>
+
+  <!-- Target Race D-Day Modal -->
+  <div id="dday-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-pop">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <div>
+          <span class="text-[11px] font-bold text-rose-400 uppercase tracking-wider">Target Race D-Day</span>
+          <h3 class="text-lg font-extrabold text-white">📅 목표 대회 &amp; D-Day 설정</h3>
+        </div>
+        <button type="button" onclick="closeDdayModal()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white text-xs font-bold transition">✕ 닫기</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="text-slate-400 block mb-1 font-semibold">목표 대회명</label>
+          <input id="dday-name-input" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white font-bold focus:border-indigo-500 focus:outline-none" placeholder="예: 2027 서울 마라톤, 춘천 하프">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="text-slate-400 block mb-1 font-semibold">대회 일자 (4자리 연도)</label>
+            <div class="relative">
+              <input id="dday-date-input" type="text" inputmode="numeric" maxlength="10" autocomplete="off"
+                placeholder="YYYY-MM-DD (예: 20261011)"
+                oninput="handleSmartDateInput(this)"
+                onclick="openCalendarForInput(this)"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-3 pr-9 py-2.5 text-white font-semibold focus:border-indigo-500 focus:outline-none">
+              <button type="button" onclick="openCalendarForInput(document.getElementById('dday-date-input'))" class="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-indigo-300 hover:bg-slate-800 transition" title="달력에서 선택">
+                📅
+              </button>
+            </div>
+          </div>
+          <div>
+            <label class="text-slate-400 block mb-1 font-semibold">출전 종목</label>
+            <select id="dday-dist-input" onchange="calcDdayPace()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white font-bold focus:border-indigo-500 focus:outline-none">
+              <option value="5">5K (5.0 km)</option>
+              <option value="10">10K (10.0 km)</option>
+              <option value="21.0975">Half (21.1 km)</option>
+              <option value="42.195">Full (42.195 km)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="text-slate-400 block mb-1 font-semibold">목표 완주 기록</label>
+            <input id="dday-time-input" type="text" inputmode="numeric" oninput="handleTimeInput(this); calcDdayPace()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-emerald-400 font-bold focus:border-indigo-500 focus:outline-none" placeholder="숫자 입력 (예: 14500)">
+          </div>
+          <div>
+            <label class="text-slate-400 block mb-1 font-semibold">목표 평균 페이스</label>
+            <input id="dday-pace-input" type="text" inputmode="numeric" oninput="handlePaceInput(this); calcDdayTime()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-indigo-400 font-bold focus:border-indigo-500 focus:outline-none" placeholder="숫자 입력 (예: 458)">
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center pt-3 border-t border-slate-800 gap-2">
+        <button type="button" onclick="clearDdayTarget()" class="px-3 py-2 bg-slate-800/80 hover:bg-rose-600/80 text-slate-400 hover:text-white rounded-xl text-xs font-bold transition">초기화</button>
+        <div class="flex gap-2">
+          <button type="button" onclick="saveDdayTarget(true)" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold transition">저장 + 시뮬 적용</button>
+          <button type="button" onclick="saveDdayTarget(false)" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-indigo-600/30 transition">💾 저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Race Record Edit Modal -->
+  <div id="race-edit-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-pop">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <div>
+          <span class="text-[11px] font-bold text-amber-400 uppercase tracking-wider">Edit Race Record</span>
+          <h3 class="text-lg font-extrabold text-white">✏️ 대회 기록 수정</h3>
+        </div>
+        <button type="button" onclick="closeRaceEditModal()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white text-xs font-bold transition">✕ 닫기</button>
+      </div>
+
+      <input type="hidden" id="edit-rc-id">
+      <div class="space-y-3 text-xs">
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="text-slate-400 block mb-1 font-semibold">날짜 (4자리 연도)</label>
+            <div class="relative">
+              <input id="edit-rc-date" type="text" inputmode="numeric" maxlength="10" autocomplete="off"
+                placeholder="YYYY-MM-DD (예: 20261011)"
+                oninput="handleSmartDateInput(this)"
+                onclick="openCalendarForInput(this)"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-3 pr-9 py-2.5 text-white font-semibold focus:border-indigo-500 focus:outline-none">
+              <button type="button" onclick="openCalendarForInput(document.getElementById('edit-rc-date'))" class="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-indigo-300 hover:bg-slate-800 transition" title="달력에서 선택">
+                📅
+              </button>
+            </div>
+          </div>
+          <div>
+            <label class="text-slate-400 block mb-1 font-semibold">종목</label>
+            <select id="edit-rc-type" onchange="updateEditPacePreview()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white font-bold focus:border-indigo-500 focus:outline-none">
+              <option value="5K">5K (5 km)</option>
+              <option value="10K">10K (10 km)</option>
+              <option value="Half">Half (21.0975 km)</option>
+              <option value="Full">Full (42.195 km)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-slate-400 block mb-1 font-semibold">대회명</label>
+          <input id="edit-rc-name" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white font-bold focus:border-indigo-500 focus:outline-none" placeholder="예: 2026 서울 마라톤">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="text-slate-400 block mb-1 font-semibold">기록</label>
+            <input id="edit-rc-time" type="text" inputmode="numeric" oninput="handleTimeInput(this); updateEditPacePreview()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-emerald-400 font-extrabold focus:border-indigo-500 focus:outline-none" placeholder="예: 13520">
+            <div id="edit-rc-pace-preview" class="text-[11px] text-emerald-400/90 mt-1 font-semibold">평균 페이스: -</div>
+          </div>
+          <div>
+            <label class="text-slate-400 block mb-1 font-semibold">평균 심박수 (선택)</label>
+            <input id="edit-rc-hr" type="number" min="80" max="220" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-rose-400 font-bold focus:border-indigo-500 focus:outline-none" placeholder="선택 입력 (bpm)">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-slate-400 block mb-1 font-semibold">메모 (선택)</label>
+          <input id="edit-rc-note" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:border-indigo-500 focus:outline-none" placeholder="코스 특징, 날씨, 컨디션 등 (선택)">
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center pt-3 border-t border-slate-800 gap-2">
+        <button type="button" onclick="deleteRaceFromModal()" class="px-3.5 py-2 bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/30 rounded-xl text-xs font-bold transition">
+          🗑️ 기록 삭제
+        </button>
+        <div class="flex gap-2">
+          <button type="button" onclick="closeRaceEditModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition">취소</button>
+          <button type="button" onclick="saveRaceEdit()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-indigo-600/30 transition">💾 수정 저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Optional AI Connection Settings Modal (For External PWA / Custom Proxy or API Key) -->
+  <div id="ai-settings-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-pop">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <div>
+          <span class="text-[11px] font-bold text-indigo-400 uppercase tracking-wider">AI Connection Config</span>
+          <h3 class="text-lg font-extrabold text-white">⚙️ AI 연결 설정 (선택)</h3>
+        </div>
+        <button type="button" onclick="closeAiSettingsModal()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white text-xs font-bold transition">✕ 닫기</button>
+      </div>
+
+      <div class="bg-slate-950/90 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-400 leading-relaxed">
+        💡 기본 실행 환경(Canvas 미리보기)에서는 별도 설정 없이 비워두어도 Gemini AI 세부 평가가 자동으로 동작합니다. 추후 GitHub Pages 등 외부 PWA로 분리 배포할 때만 아래 중 하나를 입력하세요.
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="text-slate-300 block mb-1 font-bold">Apps Script 프록시 URL (외부 배포 추천)</label>
+          <input id="ai-proxy-url-input" type="url" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:border-indigo-500 focus:outline-none" placeholder="https://script.google.com/macros/s/.../exec">
+          <p class="text-[11px] text-slate-500 mt-1">프록시 URL을 설정하면 API 키를 노출하지 않고 안전하게 호출합니다.</p>
+        </div>
+
+        <div>
+          <label class="text-slate-300 block mb-1 font-bold">사용자 Gemini API Key (개인 테스트용)</label>
+          <input id="ai-api-key-input" type="password" autocomplete="off" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:border-indigo-500 focus:outline-none" placeholder="비워두면 기본 내장 환경으로 호출">
+          <p class="text-[11px] text-slate-500 mt-1">이 브라우저의 로컬 저장소에만 보관되며 JSON 백업 파일에는 포함되지 않습니다.</p>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center pt-3 border-t border-slate-800 gap-2">
+        <button type="button" onclick="resetAiSettings()" class="px-3 py-2 bg-slate-800 hover:bg-rose-600/80 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition">초기화</button>
+        <div class="flex gap-2">
+          <button type="button" onclick="closeAiSettingsModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition">취소</button>
+          <button type="button" onclick="saveAiSettings()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-indigo-600/30 transition">💾 설정 저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PWA App Install Guide Modal (Auto-detects iOS / Android / PC / In-App Browser) -->
+  <div id="pwa-install-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-indigo-500/40 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-pop">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-emerald-500 flex items-center justify-center font-black text-base text-white shadow-lg shadow-indigo-500/25 shrink-0">
+            RP
+          </div>
+          <div>
+            <span class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">Install App (PWA)</span>
+            <h3 class="text-base sm:text-lg font-extrabold text-white">📲 레이스 플래너 앱 설치</h3>
+          </div>
+        </div>
+        <button type="button" onclick="closePwaInstallModal()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white text-xs font-bold transition">✕ 닫기</button>
+      </div>
+
+      <!-- In-App Browser Warning (KakaoTalk, Naver, Instagram, etc.) -->
+      <div id="pwa-inapp-warning" class="hidden bg-amber-500/15 border border-amber-500/40 rounded-xl p-3.5 text-xs text-amber-200 space-y-1.5 leading-relaxed">
+        <div class="font-extrabold text-amber-300">⚠️ 카카오톡·SNS 인앱 브라우저로 열려 있습니다</div>
+        <p>인앱 브라우저에서는 앱 설치가 제한됩니다. 우측 상단 또는 하단의 <strong>[⋮ / ⋯] → [다른 브라우저로 열기 (Chrome / Safari)]</strong>를 눌러 다시 열어주세요.</p>
+      </div>
+
+      <!-- Native Direct Install Action (Shown when beforeinstallprompt is available) -->
+      <div id="pwa-native-install-box" class="hidden bg-indigo-950/60 border border-indigo-500/40 rounded-xl p-4 space-y-3">
+        <div class="text-xs text-slate-200 leading-relaxed">
+          홈 화면(또는 바탕화면)에 앱 아이콘이 추가되며, 주소창 없는 전체화면과 <strong>오프라인 환경</strong>에서도 바로 사용할 수 있습니다.
+        </div>
+        <button type="button" onclick="triggerNativePwaInstall()" class="w-full py-3 bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white rounded-xl text-sm font-extrabold shadow-lg shadow-indigo-600/30 transition">
+          📲 지금 바로 앱 설치하기
+        </button>
+      </div>
+
+      <!-- Platform-Specific Manual Instructions -->
+      <div id="pwa-manual-guide" class="space-y-2.5 text-xs text-slate-300"></div>
+
+      <div class="flex justify-between items-center pt-3 border-t border-slate-800 gap-2">
+        <button type="button" onclick="shareAppLink()" class="px-3.5 py-2 bg-slate-800 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-xl text-xs font-bold transition">
+          🔗 설치 링크 공유
+        </button>
+        <button type="button" onclick="closePwaInstallModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition">
+          확인
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Sticky Header -->
+  <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 pwa-safe-top">
+    <div class="max-w-6xl mx-auto px-4 py-3.5 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+      <!-- App Title & Emblem -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-emerald-500 flex items-center justify-center font-black text-base text-white shadow-lg shadow-indigo-500/25 shrink-0">
+          RP
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-lg md:text-xl font-extrabold tracking-tight text-white">레이스 플래너</h1>
+            <span class="text-[11px] font-bold px-2 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full">
+              Race Planner
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">구간별 페이스 시뮬레이터 &amp; 내 대회 기록 기반 전략 평가</p>
+        </div>
+      </div>
+
+      <!-- Core PB & D-Day Badges -->
+      <div class="grid grid-cols-4 gap-1.5 w-full md:w-auto bg-slate-950/90 p-2 rounded-xl border border-slate-800 text-center">
+        <div class="px-2">
+          <div class="text-[10px] text-slate-400 uppercase font-semibold">10K PB</div>
+          <div id="header-pb-10k" class="text-xs md:text-sm font-extrabold text-emerald-400 mt-0.5">-</div>
+        </div>
+        <div class="px-2 border-l border-slate-800">
+          <div class="text-[10px] text-slate-400 uppercase font-semibold">Half PB</div>
+          <div id="header-pb-half" class="text-xs md:text-sm font-extrabold text-indigo-400 mt-0.5">-</div>
+        </div>
+        <div class="px-2 border-l border-slate-800">
+          <div class="text-[10px] text-slate-400 uppercase font-semibold">Full PB</div>
+          <div id="header-pb-full" class="text-xs md:text-sm font-extrabold text-amber-400 mt-0.5">-</div>
+        </div>
+        <button type="button" onclick="openDdayModal()" class="px-2 border-l border-slate-800 hover:bg-slate-900 rounded-r-lg transition text-center group cursor-pointer" title="클릭하여 목표 대회 D-Day 설정">
+          <div class="text-[10px] text-slate-400 flex items-center justify-center gap-0.5 truncate">
+            <span id="header-dday-title" class="truncate">목표 대회</span>
+            <span class="text-indigo-400 group-hover:scale-110 transition shrink-0">✏️</span>
+          </div>
+          <div id="header-dday-value" class="text-xs md:text-sm font-extrabold text-rose-400 mt-0.5 truncate">설정하기</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs & PWA/Backup Actions -->
+    <div class="max-w-6xl mx-auto px-4 flex justify-between items-center gap-2 overflow-x-auto border-t border-slate-800/70 pt-2">
+      <div class="flex gap-1 shrink-0">
+        <button type="button" onclick="switchTab('simulator')" id="tab-btn-simulator" class="tab-btn px-4 py-2.5 text-xs md:text-sm font-bold rounded-t-xl border-b-2 border-indigo-500 text-indigo-400 bg-slate-800/60 whitespace-nowrap transition flex items-center gap-1.5">
+          <span>🎯</span>
+          <span>페이스 시뮬레이터</span>
+        </button>
+        <button type="button" onclick="switchTab('races')" id="tab-btn-races" class="tab-btn px-4 py-2.5 text-xs md:text-sm font-bold rounded-t-xl border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap transition flex items-center gap-1.5">
+          <span>🏆</span>
+          <span>대회 기록실</span>
+          <span id="tab-race-count" class="px-1.5 py-0.5 text-[10px] font-black rounded-full bg-slate-800 text-slate-300">0</span>
+        </button>
+      </div>
+
+      <div class="mb-1.5 flex items-center gap-1.5 shrink-0">
+        <button type="button" id="btn-pwa-install" onclick="openPwaInstallFlow()" class="px-2.5 py-1.5 bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white rounded-xl text-[11px] font-extrabold whitespace-nowrap shadow-md shadow-indigo-600/25 transition flex items-center gap-1" title="스마트폰·PC에 앱으로 설치">
+          <span>📲</span>
+          <span>앱 설치</span>
+        </button>
+        <button type="button" onclick="shareAppLink()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 rounded-xl text-[11px] font-bold whitespace-nowrap transition" title="앱 링크 공유하기">
+          🔗 공유
+        </button>
+        <button type="button" onclick="exportAllDataJson()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl text-[11px] font-bold whitespace-nowrap transition" title="현재 데이터를 JSON 파일로 백업">
+          📤 백업
+        </button>
+        <label class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl text-[11px] font-bold whitespace-nowrap transition cursor-pointer" title="백업 JSON 파일 복원">
+          📥 복원
+          <input type="file" accept=".json" class="hidden" onchange="importAllDataJson(event)">
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <!-- Offline Status Banner (Automatically displayed when internet connection is lost) -->
+  <div id="offline-banner" class="hidden bg-amber-500/15 border-b border-amber-500/30 text-amber-200 text-xs font-semibold text-center py-2 px-4">
+    📴 오프라인 모드입니다 · 페이스 계산과 대회 기록은 기기에 안전하게 자동 저장됩니다.
+  </div>
+
+  <!-- Main Content Container -->
+  <main class="max-w-6xl mx-auto px-4 pt-6 space-y-6">
+
+    <!-- ==========================================
+         TAB 1: 구간별 페이스 시뮬레이터 (CORE)
+         ========================================== -->
+    <section id="tab-simulator" class="space-y-6">
+
+      <!-- Top Control Card -->
+      <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xl space-y-5">
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+
+          <!-- Step 1: Race Distance Selection -->
+          <div class="space-y-1.5 w-full lg:w-auto">
+            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-indigo-500"></span> 1. 대회 종목 선택
+            </label>
+            <div class="grid grid-cols-4 gap-2">
+              <button type="button" onclick="selectDistance(5)" id="dist-btn-5" class="dist-btn px-3 py-2.5 rounded-xl font-extrabold text-xs md:text-sm bg-slate-800 text-slate-300 hover:bg-slate-700 transition border border-slate-700">
+                5K <span class="block text-[10px] font-normal text-slate-400">5.0 km</span>
+              </button>
+              <button type="button" onclick="selectDistance(10)" id="dist-btn-10" class="dist-btn px-3 py-2.5 rounded-xl font-extrabold text-xs md:text-sm bg-slate-800 text-slate-300 hover:bg-slate-700 transition border border-slate-700">
+                10K <span class="block text-[10px] font-normal text-slate-400">10.0 km</span>
+              </button>
+              <button type="button" onclick="selectDistance(21.0975)" id="dist-btn-21.0975" class="dist-btn px-3 py-2.5 rounded-xl font-extrabold text-xs md:text-sm bg-indigo-600 text-white transition border border-indigo-400 shadow-lg shadow-indigo-600/30">
+                Half <span class="block text-[10px] font-normal text-indigo-200">21.1 km</span>
+              </button>
+              <button type="button" onclick="selectDistance(42.195)" id="dist-btn-42.195" class="dist-btn px-3 py-2.5 rounded-xl font-extrabold text-xs md:text-sm bg-slate-800 text-slate-300 hover:bg-slate-700 transition border border-slate-700">
+                Full <span class="block text-[10px] font-normal text-slate-400">42.195 km</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Step 2: Quick Strategy Presets -->
+          <div class="space-y-1.5 w-full lg:w-auto">
+            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span> 2. 구간 프리셋 (최대 10구간)
+            </label>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" onclick="applyPreset('single')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition">
+                1구간 (단일)
+              </button>
+              <button type="button" onclick="applyPreset('half_split')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition">
+                2분할 (전/후반)
+              </button>
+              <button type="button" onclick="applyPreset('three_split')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition">
+                3분할 (초/중/후반)
+              </button>
+              <button type="button" onclick="distributeEvenly(); renderSimulator(); showToast('전 구간 거리를 균등 분할했습니다.', '📏');" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold border border-slate-700 transition">
+                📏 거리 균등 정렬
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 목표 시간 역산 바 (Clean Single Bar, 3 Balanced Split Buttons, No Weather Selector) -->
+        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2.5">
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="text-xs font-extrabold text-indigo-300 whitespace-nowrap">🎯 목표 시간 역산:</span>
+              <input id="sim-reverse-time-input" type="text" inputmode="numeric" value="1:45:24" oninput="handleTimeInput(this)" class="w-32 bg-slate-900 border border-indigo-500/40 rounded-lg px-3 py-2 text-xs sm:text-sm font-black text-emerald-400 text-center focus:outline-none focus:border-indigo-400" placeholder="예: 24950">
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 flex-1 sm:max-w-lg">
+              <button type="button" onclick="applyReverseTargetTime('even')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 hover:border-indigo-400/60 text-slate-100 rounded-xl text-xs font-bold border border-slate-700 transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+                <span>⚖️</span>
+                <span>이븐 스플릿</span>
+              </button>
+              <button type="button" onclick="applyReverseTargetTime('negative')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 hover:border-indigo-400/60 text-slate-100 rounded-xl text-xs font-bold border border-slate-700 transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+                <span>📈</span>
+                <span>네거티브 스플릿</span>
+              </button>
+              <button type="button" onclick="applyReverseTargetTime('positive')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 hover:border-indigo-400/60 text-slate-100 rounded-xl text-xs font-bold border border-slate-700 transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+                <span>📉</span>
+                <span>포지티브 스플릿</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Subtle Fit Note (Shown when exact-second reverse matching fine-tunes boundaries or decimal pace) -->
+          <div id="sim-reverse-fit-note" class="hidden text-[11px] text-emerald-300/90 bg-emerald-950/30 border border-emerald-500/25 rounded-lg px-3 py-1.5 leading-relaxed"></div>
+        </div>
+
+        <!-- Helper Banner -->
+        <div class="bg-slate-950/70 px-3.5 py-2.5 rounded-xl border border-slate-800/80 flex flex-wrap justify-between items-center gap-2 text-xs text-slate-400">
+          <span>💡 <strong>조작 팁:</strong> 슬라이더 손잡이를 드래그하면 <strong>정수 km</strong>와 <strong>5초 단위 페이스</strong>에 자석처럼 자연스럽게 맞물립니다.</span>
+          <span class="text-indigo-300 font-semibold">구간 사이 <strong class="text-emerald-400">[+ 여기에 구간 분할 추가]</strong>로 최대 <strong>10구간</strong>까지 분할할 수 있습니다.</span>
+        </div>
+
+        <!-- Dynamic Segments List -->
+        <div id="segments-list" class="space-y-1.5 pt-1"></div>
+
+        <!-- 구간별 페이스 & 거리 비중 프로필 (Dynamic Relative Height Scaling + Gridlines) -->
+        <div class="bg-slate-950/90 p-4 rounded-xl border border-slate-800/90 space-y-2.5">
+          <div class="flex flex-wrap justify-between items-center gap-2 text-xs text-slate-400">
+            <span class="font-bold text-slate-200">📊 구간별 페이스 &amp; 거리 비중 프로필</span>
+            <span id="pace-chart-range-label" class="text-[11px] text-slate-400">너비 = 거리 비중 · 높이 = 구간 내 상대 속도</span>
+          </div>
+          <div class="relative h-36 w-full pt-2">
+            <!-- Horizontal Reference Grid Lines -->
+            <div class="absolute inset-x-0 bottom-0 h-full pointer-events-none flex flex-col justify-between py-1">
+              <div class="border-t border-dashed border-slate-800/70 w-full"></div>
+              <div class="border-t border-dashed border-slate-800/70 w-full"></div>
+              <div class="border-t border-dashed border-slate-800/70 w-full"></div>
+              <div class="border-t border-slate-800 w-full"></div>
+            </div>
+            <!-- Bars Container -->
+            <div id="pace-visual-bars" class="relative z-10 h-full w-full flex items-end gap-1.5 px-0.5"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom 2-Column Results & Evaluation -->
+      <div class="grid lg:grid-cols-12 gap-6 items-start">
+
+        <!-- Left 5 Cols: Real-Time Race Projection -->
+        <div class="lg:col-span-5 bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-900 p-5 sm:p-6 rounded-2xl border border-indigo-500/40 shadow-xl flex flex-col justify-between space-y-5">
+          <div>
+            <div class="flex justify-between items-center gap-2">
+              <span class="text-[11px] font-extrabold uppercase tracking-wider text-indigo-300 bg-indigo-500/20 px-2.5 py-1 rounded-full border border-indigo-400/30">
+                Real-Time Projection
+              </span>
+              <span id="race-badge-label" class="text-xs font-bold text-slate-400">Half Marathon (21.1K)</span>
+            </div>
+
+            <div class="mt-4">
+              <div class="text-xs text-slate-400 font-semibold">예상 완주 기록 (Finish Time)</div>
+              <div id="result-total-time" class="text-5xl sm:text-6xl font-black text-white tracking-tight mt-1">
+                01:45:24
+              </div>
+
+              <!-- PB Comparison Badge (Only shown if matching distance PB exists) -->
+              <div id="result-pb-badge-wrap" class="flex flex-wrap gap-1.5 mt-2.5 empty:hidden"></div>
+            </div>
+
+            <!-- Average Pace & Split Pattern Summary -->
+            <div class="grid grid-cols-2 gap-2.5 mt-5 bg-slate-950/75 p-3.5 rounded-xl border border-slate-800">
+              <div>
+                <div class="text-[11px] text-slate-400">목표 평균 페이스</div>
+                <div id="result-avg-pace" class="text-lg font-extrabold text-emerald-400 mt-0.5">5'00" /km</div>
+              </div>
+              <div class="border-l border-slate-800 pl-3">
+                <div class="text-[11px] text-slate-400">스플릿 전략 패턴</div>
+                <div id="result-split-pattern" class="text-sm font-extrabold text-indigo-300 mt-1">📈 네거티브 스플릿</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Split Table, 5K Checkpoints & Energy Gel Strategy -->
+          <div class="space-y-2.5">
+            <div class="text-xs font-bold text-slate-300 flex justify-between items-center">
+              <span>⏱️ 구간 통과 시간 &amp; 5K 체크포인트</span>
+              <button type="button" onclick="copyPaceBandToClipboard()" class="px-2.5 py-1 bg-slate-800 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-lg text-[11px] font-bold border border-slate-700 transition">
+                📋 페이스밴드 복사
+              </button>
+            </div>
+            <div id="split-table-body" class="bg-slate-950/80 rounded-xl p-3 border border-slate-800 text-xs space-y-1.5 max-h-44 overflow-y-auto custom-scrollbar"></div>
+            <div id="checkpoint-5k-box" class="bg-slate-950/90 rounded-xl p-3 border border-indigo-500/30 text-[11px] space-y-1.5"></div>
+          </div>
+
+          <!-- Save / Load Strategy Plans -->
+          <div class="space-y-3 pt-2 border-t border-slate-800/80">
+            <div class="flex gap-2">
+              <input id="plan-title-input" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500" placeholder="전략 이름 (예: 가을 하프 1:45 플랜)">
+              <button type="button" onclick="saveCurrentPlan()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl whitespace-nowrap shadow-lg shadow-indigo-600/30 transition">
+                💾 전략 저장
+              </button>
+            </div>
+            <div>
+              <div class="text-[11px] font-bold text-slate-400 mb-1.5">📂 저장된 레이스 플랜</div>
+              <div id="saved-plans-container" class="flex flex-wrap gap-1.5"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right 7 Cols: Two Stacked Evaluation Sections (Basic + AI Detailed Evaluation) -->
+        <div class="lg:col-span-7 space-y-6">
+
+          <!-- (A) 기본 전략 평가 (Riegel Formula & Split Analysis) -->
+          <div class="bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
+            <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-800 pb-3">
+              <div>
+                <span class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">Record-Based Basic Evaluation</span>
+                <h2 class="text-lg font-extrabold text-white mt-0.5">📊 기본 전략 평가</h2>
+              </div>
+              <span id="verdict-badge" class="px-3 py-1.5 text-xs font-extrabold rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                평가 대기 중 (기록 필요)
+              </span>
+            </div>
+
+            <!-- Dynamic Basic Evaluation Body -->
+            <div id="verdict-content" class="space-y-3 text-sm text-slate-200 leading-relaxed"></div>
+
+            <!-- Baseline Summary Footer (Shown only when 1+ qualifying records exist) -->
+            <div id="eval-baseline-footer" class="hidden bg-slate-950 p-4 rounded-xl border border-slate-800/90 space-y-2">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <span class="text-xs font-bold text-indigo-300">📌 평가에 사용된 기준 기록 (Riegel 공식)</span>
+                <button type="button" onclick="goToAddRaceRecord()" class="px-2.5 py-1 bg-slate-800 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-lg text-[11px] font-bold border border-slate-700 transition">
+                  + 대회 기록 추가/관리 ➔
+                </button>
+              </div>
+              <div id="eval-baseline-summary" class="text-xs text-slate-300 leading-relaxed"></div>
+            </div>
+          </div>
+
+          <!-- (B) AI 세부 평가 (Dedicated Gemini AI Deep Evaluation Section) -->
+          <div id="ai-eval-section" class="bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950/50 p-5 sm:p-6 rounded-2xl border border-indigo-500/35 shadow-xl space-y-4">
+            <div class="flex flex-wrap justify-between items-center gap-3 border-b border-slate-800/90 pb-3.5">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[11px] font-bold text-indigo-400 uppercase tracking-wider">Gemini AI Deep Coaching</span>
+                  <span id="ai-mode-badge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Gemini 연동</span>
+                </div>
+                <h2 class="text-lg font-extrabold text-white mt-0.5">✨ AI 세부 평가</h2>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="openAiSettingsModal()" class="px-2.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-bold border border-slate-700 transition" title="외부 배포용 AI 연결 설정 (선택)">
+                  ⚙️ AI 연결 설정
+                </button>
+                <button type="button" id="btn-run-ai-eval" onclick="requestAiDetailedEvaluation()" class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white rounded-xl text-xs sm:text-sm font-extrabold shadow-lg shadow-indigo-600/25 transition flex items-center gap-1.5 whitespace-nowrap">
+                  <span>✨ AI 세부 평가 받기</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Stale Plan Warning Banner (Appears when sliders/records change after AI evaluation) -->
+            <div id="ai-stale-banner" class="hidden bg-amber-500/15 border border-amber-500/40 rounded-xl px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span class="text-amber-300 font-bold">⚠️ 플랜이 변경되었습니다 — 다시 평가해 보세요</span>
+              <button type="button" onclick="requestAiDetailedEvaluation()" class="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg font-extrabold transition">
+                🔄 지금 재평가
+              </button>
+            </div>
+
+            <!-- AI Evaluation Dynamic Content Container -->
+            <div id="ai-eval-body" class="space-y-3">
+              <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4 sm:p-5 text-xs text-slate-300 space-y-2 leading-relaxed">
+                <div class="font-bold text-indigo-300 flex items-center gap-1.5">
+                  <span>🤖</span>
+                  <span>내 전체 대회 기록과 현재 구간 스플릿을 AI가 종합 정밀 진단합니다</span>
+                </div>
+                <p class="text-slate-400">
+                  상단의 <strong class="text-white">[✨ AI 세부 평가 받기]</strong> 버튼을 누르면 누적된 대회 기록 추세·심박 데이터·구간별 페이스 변화를 교차 분석하여 <strong class="text-slate-200">목표 현실성 진단, 오버페이스·후반 급락 리스크 구간, 구체적인 페이스 수정안 및 실전 보급 팁</strong>을 제공합니다.
+                </p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==========================================
+         TAB 2: 대회 기록실
+         ========================================== -->
+    <section id="tab-races" class="hidden space-y-6">
+      <div class="grid lg:grid-cols-12 gap-6 items-start">
+
+        <!-- Left 5 Cols: 새 대회 기록 등록 Form -->
+        <div id="add-race-form-card" class="lg:col-span-5 bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4 transition-all">
+          <div class="border-b border-slate-800 pb-3">
+            <span class="text-[11px] font-bold text-indigo-400 uppercase tracking-wider">Add Official Race Record</span>
+            <h2 class="text-lg font-extrabold text-white mt-0.5">➕ 새 대회 기록 등록</h2>
+            <p class="text-xs text-slate-400 mt-1">10K, 하프, 풀코스 중 최소 1개 이상의 기록을 입력하면 기본 전략 평가와 AI 세부 평가가 모두 활성화됩니다.</p>
+          </div>
+
+          <form onsubmit="event.preventDefault(); addRaceRecord();" class="space-y-3.5 text-xs">
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="text-slate-300 block mb-1 font-bold">날짜 <span class="text-rose-400">*</span></label>
+                <div class="relative">
+                  <input id="rc-date" type="text" inputmode="numeric" maxlength="10" autocomplete="off" required
+                    placeholder="YYYY-MM-DD (예: 20261011)"
+                    oninput="handleSmartDateInput(this)"
+                    onclick="openCalendarForInput(this)"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-3 pr-9 py-2.5 text-white font-semibold focus:border-indigo-500 focus:outline-none">
+                  <button type="button" onclick="openCalendarForInput(document.getElementById('rc-date'))" class="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-indigo-300 hover:bg-slate-800 transition" title="달력에서 선택">
+                    📅
+                  </button>
+                </div>
+                <div class="text-[10px] text-slate-500 mt-1">8자리 숫자 입력(예: 20261011) 또는 클릭</div>
+              </div>
+              <div>
+                <label class="text-slate-300 block mb-1 font-bold">종목 <span class="text-rose-400">*</span></label>
+                <select id="rc-type" onchange="updateAddPacePreview()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white font-bold focus:border-indigo-500 focus:outline-none">
+                  <option value="5K">5K (5 km)</option>
+                  <option value="10K">10K (10 km)</option>
+                  <option value="Half" selected>Half (21.0975 km)</option>
+                  <option value="Full">Full (42.195 km)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-slate-300 block mb-1 font-bold">대회명 <span class="text-rose-400">*</span></label>
+              <input id="rc-name" type="text" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white font-semibold focus:border-indigo-500 focus:outline-none" placeholder="예: 2026 서울 마라톤">
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="text-slate-300 block mb-1 font-bold">기록 <span class="text-rose-400">*</span></label>
+                <input id="rc-time" type="text" inputmode="numeric" required oninput="handleTimeInput(this); updateAddPacePreview()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-emerald-400 font-extrabold text-sm focus:border-indigo-500 focus:outline-none" placeholder="예: 13520 → 1:35:20">
+                <div id="rc-pace-preview" class="text-[11px] text-slate-500 mt-1.5 font-semibold min-h-[16px]">예: 4530 → 45:30 / 13520 → 1:35:20</div>
+              </div>
+              <div>
+                <label class="text-slate-300 block mb-1 font-bold">평균 심박수 <span class="text-slate-500 font-normal">(선택)</span></label>
+                <input id="rc-hr" type="number" min="80" max="220" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-rose-400 font-bold text-sm focus:border-indigo-500 focus:outline-none" placeholder="선택 입력 (bpm)">
+                <div class="text-[11px] text-slate-500 mt-1.5">입력 시 심박 진단 반영</div>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-slate-300 block mb-1 font-bold">메모 <span class="text-slate-500 font-normal">(선택)</span></label>
+              <input id="rc-note" type="text" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-white focus:border-indigo-500 focus:outline-none" placeholder="예: 후반 오르막 있음, 우중주, 컨디션 최상 등">
+            </div>
+
+            <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-lg shadow-indigo-600/30 transition">
+              🏆 대회 기록 추가하기
+            </button>
+          </form>
+        </div>
+
+        <!-- Right 7 Cols: Riegel Equivalent Predictor + Race History List -->
+        <div class="lg:col-span-7 space-y-6">
+
+          <!-- Equivalent Distance Predictor (Shown when 1+ 10K/Half/Full records exist) -->
+          <div id="riegel-predictor-card" class="hidden bg-gradient-to-br from-slate-900 to-indigo-950/60 p-5 sm:p-6 rounded-2xl border border-indigo-500/30 shadow-xl space-y-4">
+            <div>
+              <span class="text-[11px] font-bold text-indigo-300 uppercase tracking-wider">Riegel Performance Predictor</span>
+              <h3 class="text-base font-extrabold text-white mt-0.5">🚀 내 기록 기반 종목별 예상 완주 기록</h3>
+              <p id="riegel-basis-note" class="text-xs text-slate-400 mt-0.5"></p>
+            </div>
+            <div id="riegel-predictor-grid" class="grid sm:grid-cols-2 gap-2.5 text-xs"></div>
+          </div>
+
+          <!-- Saved Race History List -->
+          <div class="bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-800 shadow-xl space-y-4">
+            <div class="flex flex-wrap justify-between items-center gap-3 border-b border-slate-800 pb-3">
+              <div>
+                <span class="text-[11px] font-bold text-amber-400 uppercase tracking-wider">Official Race History</span>
+                <h2 class="text-lg font-extrabold text-white mt-0.5">🏆 대회 기록실</h2>
+              </div>
+              <div class="flex flex-wrap gap-1.5 text-xs">
+                <button type="button" onclick="filterRaces('ALL')" id="race-filter-ALL" class="race-filter-btn px-2.5 py-1.5 bg-indigo-600 text-white rounded-lg font-bold transition">전체</button>
+                <button type="button" onclick="filterRaces('Full')" id="race-filter-Full" class="race-filter-btn px-2.5 py-1.5 bg-slate-800 text-slate-300 rounded-lg font-bold hover:bg-slate-700 transition">Full</button>
+                <button type="button" onclick="filterRaces('Half')" id="race-filter-Half" class="race-filter-btn px-2.5 py-1.5 bg-slate-800 text-slate-300 rounded-lg font-bold hover:bg-slate-700 transition">Half</button>
+                <button type="button" onclick="filterRaces('10K')" id="race-filter-10K" class="race-filter-btn px-2.5 py-1.5 bg-slate-800 text-slate-300 rounded-lg font-bold hover:bg-slate-700 transition">10K</button>
+                <button type="button" onclick="filterRaces('5K')" id="race-filter-5K" class="race-filter-btn px-2.5 py-1.5 bg-slate-800 text-slate-300 rounded-lg font-bold hover:bg-slate-700 transition">5K</button>
+              </div>
+            </div>
+
+            <div id="race-history-list" class="space-y-2.5 max-h-[540px] overflow-y-auto custom-scrollbar pr-1"></div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Subtle App Footer (Install guide button auto-hides in installed PWA mode) -->
+  <footer class="max-w-6xl mx-auto px-4 mt-10 pt-5 border-t border-slate-800/70 flex flex-col sm:flex-row justify-between items-center gap-3 text-[11px] text-slate-500">
+    <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+      <span class="font-bold text-slate-400">레이스 플래너 (Race Planner)</span>
+      <span>·</span>
+      <span id="pwa-status-text">모든 기록은 이 기기에 개별 저장됩니다</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button type="button" id="btn-pwa-install-footer" onclick="openPwaInstallFlow()" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-indigo-300 border border-slate-800 font-semibold transition">
+        📲 설치 안내
+      </button>
+    </div>
+  </footer>
+
+  <script>
+    // =====================================================
+    // 1. CONSTANTS & CLEAN DEFAULT STATE (ZERO PERSONAL DATA)
+    // =====================================================
+    const STORAGE_KEY = "RACE_PLANNER_V2";
+    const AI_CONFIG_STORAGE_KEY = "RACE_PLANNER_AI_CONFIG";
+    const MIN_PACE_SEC = 180; // 3'00"/km
+    const MAX_PACE_SEC = 450; // 7'30"/km
+    const MAX_SEGMENTS = 10;  // Up to 10 segments for Full Marathon planning
+    const RIEGEL_EXPONENT = 1.06;
+
+    const DIST_BY_TYPE = {
+      '5K': 5,
+      '10K': 10,
+      'Half': 21.0975,
+      'Full': 42.195
+    };
+
+    const TYPE_BY_DIST = {
+      5: '5K',
+      10: '10K',
+      21.0975: 'Half',
+      42.195: 'Full'
+    };
+
+    let currentRaceDist = 21.0975;
+    let currentRaceFilter = 'ALL';
+
+    let targetRaceInfo = {
+      name: "",
+      date: "",
+      dist: 21.0975,
+      time: "",
+      pace: ""
+    };
+
+    // Default Half Marathon (21.0975K) with 3 segments: 5K @ 5'05", 10K @ 5'00", 6.0975K @ 4'55"
+    let segments = [
+      { dist: 5.0, paceSec: 305 },
+      { dist: 10.0, paceSec: 300 },
+      { dist: 6.0975, paceSec: 295 }
+    ];
+
+    let savedPlans = [];
+    let raceHistory = [];
+
+    // AI Evaluation state tracking
+    let hasAiEvaluationResult = false;
+    let isAiEvaluating = false;
+    let aiConfig = {
+      proxyUrl: "",
+      apiKey: ""
+    };
+
+    // Custom Calendar Popup state
+    let activeCalendarInput = null;
+    let calViewYear = new Date().getFullYear();
+    let calViewMonth = new Date().getMonth() + 1; // 1 ~ 12
+
+    // =====================================================
+    // 2. TIME / PACE / SMART DATE FORMATTING UTILITIES
+    // =====================================================
+    function formatPace(sec) {
+      const rounded = Math.round(sec * 10) / 10;
+      let m = Math.floor(rounded / 60);
+      let rem = +(rounded - m * 60).toFixed(1);
+      if (rem >= 60) {
+        m += 1;
+        rem = 0;
+      }
+      if (Math.abs(rem - Math.round(rem)) < 0.05) {
+        const intRem = Math.round(rem);
+        if (intRem >= 60) return `${m + 1}'00"`;
+        return `${m}'${String(intRem).padStart(2, '0')}"`;
+      }
+      return `${m}'${rem < 10 ? '0' : ''}${rem.toFixed(1)}"`;
+    }
+
+    function formatTime(totalSec) {
+      const sec = Math.max(0, Math.round(totalSec));
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+      if (h > 0) {
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      }
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function formatTimeCompact(totalSec) {
+      const sec = Math.max(0, Math.round(totalSec));
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+      if (h > 0) {
+        return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      }
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function parseTimeToSeconds(timeStr) {
+      if (!timeStr) return null;
+      const cleaned = String(timeStr).replace(/[^0-9:]/g, '');
+      const parts = cleaned.split(':').filter(p => p !== '').map(Number);
+      if (parts.some(isNaN) || parts.length < 2) return null;
+      if (parts.length === 3) {
+        return parts[0] * 3600 + parts[1] * 60 + parts[2];
+      }
+      return parts[0] * 60 + parts[1];
+    }
+
+    function parsePaceToSeconds(paceStr) {
+      if (!paceStr) return null;
+      const nums = String(paceStr).match(/\d+(\.\d+)?/g);
+      if (!nums) return null;
+      if (nums.length >= 2) return parseFloat(nums[0]) * 60 + parseFloat(nums[1]);
+      return parseFloat(nums[0]) * 60;
+    }
+
+    function handleTimeInput(el) {
+      const nums = el.value.replace(/\D/g, '').slice(0, 6);
+      if (nums.length === 0) {
+        el.value = '';
+        return;
+      }
+      if (nums.length <= 2) {
+        el.value = nums;
+      } else if (nums.length <= 4) {
+        el.value = nums.slice(0, nums.length - 2) + ':' + nums.slice(nums.length - 2);
+      } else {
+        el.value = nums.slice(0, nums.length - 4) + ':' + nums.slice(nums.length - 4, nums.length - 2) + ':' + nums.slice(nums.length - 2);
+      }
+    }
+
+    function handlePaceInput(el) {
+      const nums = el.value.replace(/\D/g, '').slice(0, 3);
+      if (nums.length === 0) {
+        el.value = '';
+        return;
+      }
+      const m = nums.slice(0, 1);
+      const s = nums.slice(1, 3);
+      let res = m;
+      if (s.length > 0) res += "'" + s;
+      if (s.length === 2) res += '"';
+      el.value = res;
+    }
+
+    function getTodayDateString() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function getDaysInMonth(year, month) {
+      return new Date(year, month, 0).getDate();
+    }
+
+    // Strict 4-digit year auto-formatter: "20261011" -> "2026-10-11" with leap-year day clamping
+    function handleSmartDateInput(el) {
+      let digits = el.value.replace(/\D/g, '').slice(0, 8);
+      let formatted = '';
+
+      if (digits.length <= 4) {
+        formatted = digits;
+      } else if (digits.length <= 6) {
+        const y = digits.slice(0, 4);
+        let mStr = digits.slice(4, 6);
+        if (mStr.length === 2) {
+          let mNum = parseInt(mStr, 10);
+          if (mNum < 1) mNum = 1;
+          if (mNum > 12) mNum = 12;
+          mStr = String(mNum).padStart(2, '0');
+        }
+        formatted = `${y}-${mStr}`;
+      } else {
+        const y = digits.slice(0, 4);
+        let mNum = parseInt(digits.slice(4, 6), 10);
+        if (isNaN(mNum) || mNum < 1) mNum = 1;
+        if (mNum > 12) mNum = 12;
+        const mStr = String(mNum).padStart(2, '0');
+
+        let dStr = digits.slice(6, 8);
+        if (dStr.length === 2) {
+          const maxDay = getDaysInMonth(parseInt(y, 10), mNum);
+          let dNum = parseInt(dStr, 10);
+          if (dNum < 1) dNum = 1;
+          if (dNum > maxDay) dNum = maxDay;
+          dStr = String(dNum).padStart(2, '0');
+        }
+        formatted = `${y}-${mStr}-${dStr}`;
+      }
+
+      el.value = formatted;
+
+      // Live-sync calendar popup if open for this input
+      if (activeCalendarInput === el && /^\d{4}-\d{2}/.test(formatted)) {
+        const parts = formatted.split('-').map(Number);
+        if (parts[0] >= 1950 && parts[0] <= 2100 && parts[1] >= 1 && parts[1] <= 12) {
+          calViewYear = parts[0];
+          calViewMonth = parts[1];
+          renderCalendarGrid();
+        }
+      }
+    }
+
+    function isValidDateString(str) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(str)) return false;
+      const [y, m, d] = str.split('-').map(Number);
+      if (y < 1950 || y > 2100 || m < 1 || m > 12) return false;
+      const maxDay = getDaysInMonth(y, m);
+      return d >= 1 && d <= maxDay;
+    }
+
+    function normalizeDateString(raw) {
+      if (!raw) return "";
+      const digits = String(raw).replace(/\D/g, '').slice(0, 8);
+      if (digits.length === 8) {
+        const y = parseInt(digits.slice(0, 4), 10);
+        const m = Math.max(1, Math.min(12, parseInt(digits.slice(4, 6), 10)));
+        const maxDay = getDaysInMonth(y, m);
+        const d = Math.max(1, Math.min(maxDay, parseInt(digits.slice(6, 8), 10)));
+        return `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      }
+      return raw;
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function showToast(msg, icon = "✅") {
+      const toast = document.getElementById('toast');
+      if (!toast) return;
+      document.getElementById('toast-msg').innerText = msg;
+      document.getElementById('toast-icon').innerText = icon;
+      toast.classList.remove('hidden');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => toast.classList.add('hidden'), 2800);
+    }
+
+    // =====================================================
+    // 3. CUSTOM DARK CALENDAR POPUP
+    // =====================================================
+    function initCalendarSelects() {
+      const yearSel = document.getElementById('cal-year-select');
+      const monthSel = document.getElementById('cal-month-select');
+      if (!yearSel || !monthSel) return;
+
+      const curYear = new Date().getFullYear();
+      yearSel.innerHTML = '';
+      for (let y = curYear + 5; y >= 1990; y--) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.innerText = `${y}년`;
+        yearSel.appendChild(opt);
+      }
+
+      monthSel.innerHTML = '';
+      for (let m = 1; m <= 12; m++) {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.innerText = `${m}월`;
+        monthSel.appendChild(opt);
+      }
+    }
+
+    function openCalendarForInput(inputEl) {
+      if (!inputEl) return;
+      activeCalendarInput = inputEl;
+
+      const val = inputEl.value.trim();
+      const today = new Date();
+      if (isValidDateString(val)) {
+        const [y, m] = val.split('-').map(Number);
+        calViewYear = y;
+        calViewMonth = m;
+      } else {
+        calViewYear = today.getFullYear();
+        calViewMonth = today.getMonth() + 1;
+      }
+
+      renderCalendarGrid();
+      const popup = document.getElementById('custom-calendar-popup');
+      popup.classList.remove('hidden');
+      positionCalendarPopup(inputEl);
+    }
+
+    function positionCalendarPopup(inputEl) {
+      const popup = document.getElementById('custom-calendar-popup');
+      if (!popup || !inputEl) return;
+
+      const rect = inputEl.getBoundingClientRect();
+      const popupW = 288;
+      const popupH = popup.offsetHeight || 320;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      let left = rect.left;
+      if (left + popupW > vw - 12) left = Math.max(12, vw - popupW - 12);
+      if (left < 12) left = 12;
+
+      let top = rect.bottom + 8;
+      if (top + popupH > vh - 12) {
+        top = Math.max(12, rect.top - popupH - 8);
+      }
+
+      popup.style.left = `${left}px`;
+      popup.style.top = `${top}px`;
+    }
+
+    function renderCalendarGrid() {
+      const yearSel = document.getElementById('cal-year-select');
+      const monthSel = document.getElementById('cal-month-select');
+      const grid = document.getElementById('cal-days-grid');
+      if (!grid) return;
+
+      if (yearSel) yearSel.value = String(calViewYear);
+      if (monthSel) monthSel.value = String(calViewMonth);
+
+      const firstDow = new Date(calViewYear, calViewMonth - 1, 1).getDay();
+      const daysInMonth = getDaysInMonth(calViewYear, calViewMonth);
+      const todayStr = getTodayDateString();
+      const selectedStr = activeCalendarInput ? activeCalendarInput.value.trim() : '';
+
+      let html = '';
+      for (let i = 0; i < firstDow; i++) {
+        html += `<div class="h-8"></div>`;
+      }
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${calViewYear}-${String(calViewMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dow = (firstDow + day - 1) % 7;
+        const isSelected = dateStr === selectedStr;
+        const isToday = dateStr === todayStr;
+
+        let cls = "h-8 rounded-lg text-xs font-semibold flex items-center justify-center transition cursor-pointer ";
+        if (isSelected) {
+          cls += "bg-indigo-600 text-white font-black shadow-md shadow-indigo-600/40";
+        } else if (isToday) {
+          cls += "bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 font-extrabold hover:bg-indigo-600 hover:text-white";
+        } else if (dow === 0) {
+          cls += "text-rose-400 hover:bg-slate-800";
+        } else if (dow === 6) {
+          cls += "text-sky-400 hover:bg-slate-800";
+        } else {
+          cls += "text-slate-200 hover:bg-slate-800";
+        }
+
+        html += `<button type="button" onclick="selectCalendarDate('${dateStr}')" class="${cls}">${day}</button>`;
+      }
+
+      grid.innerHTML = html;
+    }
+
+    function shiftCalendarMonth(delta) {
+      calViewMonth += delta;
+      if (calViewMonth < 1) {
+        calViewMonth = 12;
+        calViewYear -= 1;
+      } else if (calViewMonth > 12) {
+        calViewMonth = 1;
+        calViewYear += 1;
+      }
+      renderCalendarGrid();
+    }
+
+    function onCalendarDropdownChange() {
+      const y = parseInt(document.getElementById('cal-year-select').value, 10);
+      const m = parseInt(document.getElementById('cal-month-select').value, 10);
+      if (!isNaN(y)) calViewYear = y;
+      if (!isNaN(m)) calViewMonth = m;
+      renderCalendarGrid();
+    }
+
+    function selectCalendarDate(dateStr) {
+      if (activeCalendarInput) {
+        activeCalendarInput.value = dateStr;
+        activeCalendarInput.dispatchEvent(new Event('change'));
+      }
+      closeCalendarPopup();
+    }
+
+    function selectCalendarToday() {
+      selectCalendarDate(getTodayDateString());
+    }
+
+    function closeCalendarPopup() {
+      const popup = document.getElementById('custom-calendar-popup');
+      if (popup) popup.classList.add('hidden');
+      activeCalendarInput = null;
+    }
+
+    // Close calendar on outside click or Escape key
+    document.addEventListener('mousedown', (e) => {
+      const popup = document.getElementById('custom-calendar-popup');
+      if (!popup || popup.classList.contains('hidden')) return;
+      if (popup.contains(e.target)) return;
+      if (activeCalendarInput && (e.target === activeCalendarInput || activeCalendarInput.parentElement?.contains(e.target))) return;
+      closeCalendarPopup();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeCalendarPopup();
+        closeDdayModal();
+        closeRaceEditModal();
+        closeAiSettingsModal();
+        closePwaInstallModal();
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      if (activeCalendarInput) positionCalendarPopup(activeCalendarInput);
+    });
+
+    // =====================================================
+    // 4. TAB NAVIGATION & HEADER PB / D-DAY BADGES
+    // =====================================================
+    function switchTab(tabName) {
+      closeCalendarPopup();
+      ['simulator', 'races'].forEach(t => {
+        const sec = document.getElementById(`tab-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (sec) sec.classList.add('hidden');
+        if (btn) {
+          btn.className = "tab-btn px-4 py-2.5 text-xs md:text-sm font-bold rounded-t-xl border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap transition flex items-center gap-1.5";
+        }
+      });
+      const activeSec = document.getElementById(`tab-${tabName}`);
+      const activeBtn = document.getElementById(`tab-btn-${tabName}`);
+      if (activeSec) activeSec.classList.remove('hidden');
+      if (activeBtn) {
+        activeBtn.className = "tab-btn px-4 py-2.5 text-xs md:text-sm font-bold rounded-t-xl border-b-2 border-indigo-500 text-indigo-400 bg-slate-800/60 whitespace-nowrap transition flex items-center gap-1.5";
+      }
+    }
+
+    function goToAddRaceRecord() {
+      switchTab('races');
+      const card = document.getElementById('add-race-form-card');
+      const nameInput = document.getElementById('rc-name');
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        card.classList.remove('animate-highlight');
+        void card.offsetWidth;
+        card.classList.add('animate-highlight');
+      }
+      if (nameInput) {
+        setTimeout(() => nameInput.focus(), 350);
+      }
+    }
+
+    function getBestPbSecondsByType(type) {
+      let best = Infinity;
+      raceHistory.forEach(r => {
+        if (r.type === type) {
+          const sec = parseTimeToSeconds(r.time);
+          if (sec && sec >= 300 && sec < best) best = sec;
+        }
+      });
+      return best === Infinity ? null : best;
+    }
+
+    function updateHeaderPbBadges() {
+      const best10k = getBestPbSecondsByType('10K');
+      const bestHalf = getBestPbSecondsByType('Half');
+      const bestFull = getBestPbSecondsByType('Full');
+
+      const el10k = document.getElementById('header-pb-10k');
+      const elHalf = document.getElementById('header-pb-half');
+      const elFull = document.getElementById('header-pb-full');
+      const tabCount = document.getElementById('tab-race-count');
+
+      if (el10k) el10k.innerText = best10k ? formatTimeCompact(best10k) : '-';
+      if (elHalf) elHalf.innerText = bestHalf ? formatTimeCompact(bestHalf) : '-';
+      if (elFull) elFull.innerText = bestFull ? formatTimeCompact(bestFull) : '-';
+      if (tabCount) tabCount.innerText = String(raceHistory.length);
+    }
+
+    function updateHeaderDdayBadge() {
+      const titleEl = document.getElementById('header-dday-title');
+      const valEl = document.getElementById('header-dday-value');
+      if (!titleEl || !valEl) return;
+
+      if (!targetRaceInfo.name && !targetRaceInfo.date) {
+        titleEl.innerText = '목표 대회';
+        valEl.innerText = '설정하기';
+        valEl.className = "text-xs md:text-sm font-extrabold text-rose-400 mt-0.5 truncate";
+        return;
+      }
+
+      titleEl.innerText = targetRaceInfo.name || '목표 대회';
+      if (isValidDateString(targetRaceInfo.date)) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const [y, m, d] = targetRaceInfo.date.split('-').map(Number);
+        const targetDate = new Date(y, m - 1, d);
+        targetDate.setHours(0, 0, 0, 0);
+        const diffDays = Math.round((targetDate - today) / (1000 * 60 * 60 * 24));
+        const mmdd = `${String(m).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
+
+        if (diffDays > 0) {
+          valEl.innerText = `D-${diffDays} (${mmdd})`;
+          valEl.className = "text-xs md:text-sm font-extrabold text-rose-400 mt-0.5 truncate";
+        } else if (diffDays === 0) {
+          valEl.innerText = `🔥 D-DAY`;
+          valEl.className = "text-xs md:text-sm font-extrabold text-amber-400 mt-0.5 animate-pulse truncate";
+        } else {
+          valEl.innerText = `D+${Math.abs(diffDays)} (${mmdd})`;
+          valEl.className = "text-xs md:text-sm font-extrabold text-slate-400 mt-0.5 truncate";
+        }
+      } else {
+        valEl.innerText = targetRaceInfo.time || '날짜 미정';
+        valEl.className = "text-xs md:text-sm font-extrabold text-indigo-400 mt-0.5 truncate";
+      }
+    }
+
+    // =====================================================
+    // 5. TARGET D-DAY MODAL LOGIC
+    // =====================================================
+    function openDdayModal() {
+      document.getElementById('dday-name-input').value = targetRaceInfo.name || '';
+      document.getElementById('dday-date-input').value = targetRaceInfo.date || '';
+      document.getElementById('dday-dist-input').value = String(targetRaceInfo.dist || currentRaceDist);
+      document.getElementById('dday-time-input').value = targetRaceInfo.time || '';
+      document.getElementById('dday-pace-input').value = targetRaceInfo.pace || '';
+      document.getElementById('dday-modal').classList.remove('hidden');
+    }
+
+    function closeDdayModal() {
+      closeCalendarPopup();
+      document.getElementById('dday-modal').classList.add('hidden');
+    }
+
+    function calcDdayPace() {
+      const timeSec = parseTimeToSeconds(document.getElementById('dday-time-input').value);
+      const dist = parseFloat(document.getElementById('dday-dist-input').value) || 21.0975;
+      if (timeSec && dist > 0) {
+        document.getElementById('dday-pace-input').value = formatPace(timeSec / dist);
+      }
+    }
+
+    function calcDdayTime() {
+      const paceSec = parsePaceToSeconds(document.getElementById('dday-pace-input').value);
+      const dist = parseFloat(document.getElementById('dday-dist-input').value) || 21.0975;
+      if (paceSec && dist > 0) {
+        document.getElementById('dday-time-input').value = formatTimeCompact(paceSec * dist);
+      }
+    }
+
+    function saveDdayTarget(applyToSimulator = false) {
+      const name = document.getElementById('dday-name-input').value.trim();
+      const dateRaw = document.getElementById('dday-date-input').value.trim();
+      const dist = parseFloat(document.getElementById('dday-dist-input').value) || 21.0975;
+      const time = document.getElementById('dday-time-input').value.trim();
+      const pace = document.getElementById('dday-pace-input').value.trim();
+
+      if (dateRaw && !isValidDateString(dateRaw)) {
+        showToast("올바른 날짜(YYYY-MM-DD, 4자리 연도)를 입력해 주세요.", "⚠️");
+        return;
+      }
+
+      targetRaceInfo = { name, date: dateRaw, dist, time, pace };
+      updateHeaderDdayBadge();
+      saveStateToLocalStorage();
+
+      const planInput = document.getElementById('plan-title-input');
+      if (planInput && name) {
+        planInput.value = `${name}${time ? ' (' + time + ')' : ''}`;
+      }
+
+      if (applyToSimulator) {
+        selectDistance(dist, false);
+        if (time && parseTimeToSeconds(time)) {
+          document.getElementById('sim-reverse-time-input').value = time;
+          applyReverseTargetTime('negative');
+        }
+      }
+
+      closeDdayModal();
+      showToast(name ? `목표 대회 '${name}'이(가) 설정되었습니다!` : "목표 대회 설정이 저장되었습니다!", "📅");
+    }
+
+    function clearDdayTarget() {
+      targetRaceInfo = { name: "", date: "", dist: currentRaceDist, time: "", pace: "" };
+      updateHeaderDdayBadge();
+      saveStateToLocalStorage();
+      closeDdayModal();
+      showToast("목표 대회 D-Day가 초기화되었습니다.", "🗑️");
+    }
+
+    // =====================================================
+    // 6. SIMULATOR LOGIC (ALWAYS-ON MAGNETIC SNAP & 10 MAX)
+    // =====================================================
+    function setReverseFitNote(msg) {
+      const noteEl = document.getElementById('sim-reverse-fit-note');
+      if (!noteEl) return;
+      if (!msg) {
+        noteEl.classList.add('hidden');
+        noteEl.innerText = '';
+      } else {
+        noteEl.innerText = msg;
+        noteEl.classList.remove('hidden');
+      }
+    }
+
+    function clearReverseFitNote() {
+      setReverseFitNote('');
+    }
+
+    function markAiEvaluationStale() {
+      if (hasAiEvaluationResult && !isAiEvaluating) {
+        const banner = document.getElementById('ai-stale-banner');
+        if (banner) banner.classList.remove('hidden');
+      }
+    }
+
+    function getDefaultPaceForDist(dist) {
+      // If user has qualifying records, seed reasonable default pace from Riegel prediction
+      const baseline = getBestBaselineForDist(dist);
+      if (baseline) {
+        const predPace = Math.round(baseline.predictedSec / dist);
+        return Math.max(MIN_PACE_SEC, Math.min(MAX_PACE_SEC, predPace));
+      }
+      if (dist === 5) return 275;       // 4'35"/km
+      if (dist === 10) return 290;      // 4'50"/km
+      if (dist === 21.0975) return 300; // 5'00"/km
+      return 315;                       // 5'15"/km
+    }
+
+    function selectDistance(dist, keepExistingSegments = false) {
+      currentRaceDist = dist;
+
+      [5, 10, 21.0975, 42.195].forEach(d => {
+        const btn = document.getElementById(`dist-btn-${d}`);
+        if (!btn) return;
+        if (d === dist) {
+          btn.className = "dist-btn px-3 py-2.5 rounded-xl font-extrabold text-xs md:text-sm bg-indigo-600 text-white transition border border-indigo-400 shadow-lg shadow-indigo-600/30";
+        } else {
+          btn.className = "dist-btn px-3 py-2.5 rounded-xl font-extrabold text-xs md:text-sm bg-slate-800 text-slate-300 hover:bg-slate-700 transition border border-slate-700";
+        }
+      });
+
+      const labelMap = {
+        5: "5K Race (5.0 km)",
+        10: "10K Race (10.0 km)",
+        21.0975: "Half Marathon (21.0975 km)",
+        42.195: "Full Marathon (42.195 km)"
+      };
+      const badgeEl = document.getElementById('race-badge-label');
+      if (badgeEl) badgeEl.innerText = labelMap[dist] || `${dist} km`;
+
+      if (!keepExistingSegments) {
+        const basePace = getDefaultPaceForDist(dist);
+        const count = segments.length;
+
+        if (count === 3) {
+          const dists3 = buildThreeSplitDistances(dist);
+          segments = [
+            { dist: dists3[0], paceSec: Math.min(MAX_PACE_SEC, basePace + 5) },
+            { dist: dists3[1], paceSec: basePace },
+            { dist: dists3[2], paceSec: Math.max(MIN_PACE_SEC, basePace - 5) }
+          ];
+        } else {
+          const evenDist = Math.max(0.5, Math.round((dist / count) * 2) / 2);
+          let sum = 0;
+          for (let i = 0; i < count; i++) {
+            if (i === count - 1) {
+              segments[i].dist = Math.max(0.5, +(dist - sum).toFixed(4));
+            } else {
+              const maxAllow = +(dist - sum - (count - 1 - i) * 0.5).toFixed(2);
+              segments[i].dist = Math.max(0.5, Math.min(evenDist, maxAllow));
+              sum += segments[i].dist;
+            }
+            const offset = count > 1 ? Math.round(5 - (i * (10 / (count - 1)))) : 0;
+            segments[i].paceSec = Math.max(MIN_PACE_SEC, Math.min(MAX_PACE_SEC, basePace + offset));
+          }
+        }
+        clearReverseFitNote();
+        markAiEvaluationStale();
+      }
+
+      syncReverseInputWithCurrentTotal();
+      renderSimulator();
+    }
+
+    function syncReverseInputWithCurrentTotal() {
+      const revInput = document.getElementById('sim-reverse-time-input');
+      if (!revInput) return;
+      const totalSec = segments.reduce((acc, s) => acc + s.dist * s.paceSec, 0);
+      revInput.value = formatTimeCompact(totalSec);
+    }
+
+    function buildThreeSplitDistances(dist) {
+      if (dist === 21.0975) return [5.0, 10.0, 6.0975];
+      if (dist === 42.195) return [11.0, 19.0, 12.195];
+      if (dist === 10) return [3.0, 4.0, 3.0];
+      if (dist === 5) return [1.5, 2.0, 1.5];
+      const d1 = Math.max(1, Math.round(dist * 0.25));
+      const d2 = Math.max(1, Math.round(dist * 0.45));
+      return [d1, d2, +(dist - d1 - d2).toFixed(4)];
+    }
+
+    // Target Finish Time Reverse Calculator: Exact-Second Matching for Even / Negative / Positive
+    function applyReverseTargetTime(mode = 'even') {
+      const inputEl = document.getElementById('sim-reverse-time-input');
+      if (!inputEl) return;
+      const targetSec = parseTimeToSeconds(inputEl.value);
+      if (!targetSec || targetSec < 600) {
+        showToast("올바른 목표 시간을 입력해 주세요! (예: 24950 또는 14524)", "⚠️");
+        return;
+      }
+
+      const avgPaceSec = targetSec / currentRaceDist;
+      if (avgPaceSec < MIN_PACE_SEC || avgPaceSec > MAX_PACE_SEC) {
+        showToast("목표 페이스가 시뮬레이터 범위(3'00\"~7'30\"/km)를 벗어납니다.", "⚠️");
+        return;
+      }
+
+      const targetTimeLabel = formatTimeCompact(targetSec);
+
+      // 1. Exact-Second Even Split (preserves current segment distances, allows 0.1s precision display)
+      if (mode === 'even') {
+        segments.forEach(s => { s.paceSec = avgPaceSec; });
+        const exactPaceLabel = formatPace(avgPaceSec);
+        if (Math.abs(avgPaceSec - Math.round(avgPaceSec)) >= 0.05) {
+          setReverseFitNote(`✓ 목표 시간(${targetTimeLabel})에 1초 오차 없이 맞추기 위해 전 구간 페이스를 ${exactPaceLabel}/km로 정밀 설정했습니다.`);
+        } else {
+          setReverseFitNote(`✓ 목표 시간(${targetTimeLabel})에 정확히 맞춰 전 구간 ${exactPaceLabel}/km 이븐 스플릿으로 설정했습니다.`);
+        }
+        markAiEvaluationStale();
+        renderSimulator();
+        showToast(`목표 시간(${targetTimeLabel})에 정확히 맞춰 전 구간 ${exactPaceLabel}/km 이븐 스플릿으로 세팅했습니다!`, "⚖️");
+        return;
+      }
+
+      // 2. Exact-Second Negative / Positive Split
+      let autoSplitMsg = "";
+      if (segments.length === 1) {
+        const dists3 = buildThreeSplitDistances(currentRaceDist);
+        segments = dists3.map(d => ({ dist: d, paceSec: Math.round(avgPaceSec) }));
+        autoSplitMsg = " (자동 3분할 적용)";
+      }
+
+      const N = segments.length;
+      const baseSpread = currentRaceDist >= 40 ? 3 : currentRaceDist >= 20 ? 3 : 2;
+      const halfSpread = N > 5 ? Math.min(4, baseSpread + 1) : baseSpread;
+
+      const calcTotal = (dArr, pArr) => dArr.reduce((acc, d, idx) => acc + d * pArr[idx], 0);
+      const isMonotonicValid = (pArr) => {
+        for (let i = 0; i < N; i++) {
+          if (pArr[i] < MIN_PACE_SEC || pArr[i] > MAX_PACE_SEC) return false;
+        }
+        if (mode === 'negative') {
+          for (let i = 0; i < N - 1; i++) {
+            if (pArr[i] < pArr[i + 1]) return false;
+          }
+          return pArr[0] > pArr[N - 1];
+        } else {
+          for (let i = 0; i < N - 1; i++) {
+            if (pArr[i] > pArr[i + 1]) return false;
+          }
+          return pArr[0] < pArr[N - 1];
+        }
+      };
+
+      // Generate initial monotonic integer paces
+      const paces = segments.map((_, idx) => {
+        const factor = 1 - (2 * idx) / (N - 1); // +1 at start, -1 at end
+        const raw = mode === 'negative'
+          ? avgPaceSec + halfSpread * factor
+          : avgPaceSec - halfSpread * factor;
+        return Math.max(MIN_PACE_SEC, Math.min(MAX_PACE_SEC, Math.round(raw)));
+      });
+
+      // Guarantee strict overall negative/positive direction if rounding collapsed endpoints
+      if (paces[0] === paces[N - 1]) {
+        if (mode === 'negative') {
+          if (paces[0] < MAX_PACE_SEC) paces[0] += 1;
+          else if (paces[N - 1] > MIN_PACE_SEC) paces[N - 1] -= 1;
+        } else {
+          if (paces[0] > MIN_PACE_SEC) paces[0] -= 1;
+          else if (paces[N - 1] < MAX_PACE_SEC) paces[N - 1] += 1;
+        }
+      }
+
+      const dists = segments.map(s => s.dist);
+
+      // Phase 1: Monotonic Integer-Pace Greedy Refinement (keeping current distances)
+      let iter = 0;
+      while (iter++ < 120) {
+        const curTotal = calcTotal(dists, paces);
+        if (Math.round(curTotal) === targetSec) break;
+
+        const curErr = Math.abs(curTotal - targetSec);
+        const dir = curTotal < targetSec ? 1 : -1;
+        let bestIdx = -1;
+        let bestErr = curErr;
+
+        for (let i = 0; i < N; i++) {
+          const candidate = paces.slice();
+          candidate[i] += dir;
+          if (!isMonotonicValid(candidate)) continue;
+          const err = Math.abs(calcTotal(dists, candidate) - targetSec);
+          if (err < bestErr - 1e-9) {
+            bestErr = err;
+            bestIdx = i;
+          }
+        }
+
+        if (bestIdx === -1) break;
+        paces[bestIdx] += dir;
+      }
+
+      // Phase 2: Fine Segment Boundary Distance Optimization (preserving clean integer paces)
+      let boundaryDeltaApplied = 0;
+      if (Math.round(calcTotal(dists, paces)) !== targetSec) {
+        const granularities = [
+          { step: 0.5, maxShift: 5.0 },
+          { step: 0.1, maxShift: 3.0 },
+          { step: 0.05, maxShift: 3.0 }
+        ];
+
+        let bestMove = null;
+
+        for (const { step, maxShift } of granularities) {
+          const maxSteps = Math.round(maxShift / step);
+          for (let i = 0; i < N; i++) {
+            for (let j = 0; j < N; j++) {
+              if (i === j || paces[i] === paces[j]) continue;
+
+              for (let k = 1; k <= maxSteps; k++) {
+                const delta = +(k * step).toFixed(4);
+                if (dists[j] - delta < 0.5 || dists[i] + delta < 0.5) continue;
+
+                const testDists = dists.slice();
+                testDists[i] = +(testDists[i] + delta).toFixed(2);
+                testDists[j] = +(testDists[j] - delta).toFixed(2);
+
+                // Keep non-last distances cleanly rounded and assign exact remainder to last segment
+                let nonLastSum = 0;
+                let validBounds = true;
+                for (let m = 0; m < N - 1; m++) {
+                  testDists[m] = +testDists[m].toFixed(2);
+                  if (testDists[m] < 0.5) { validBounds = false; break; }
+                  nonLastSum += testDists[m];
+                }
+                if (!validBounds) continue;
+                const lastDist = +(currentRaceDist - nonLastSum).toFixed(4);
+                if (lastDist < 0.5) continue;
+                testDists[N - 1] = lastDist;
+
+                const newTotal = calcTotal(testDists, paces);
+                if (Math.round(newTotal) === targetSec) {
+                  let roughCount = 0;
+                  for (let m = 0; m < N - 1; m++) {
+                    const modHalf = Math.abs(testDists[m] * 2 - Math.round(testDists[m] * 2));
+                    const modInt = Math.abs(testDists[m] - Math.round(testDists[m]));
+                    if (modHalf > 0.01) roughCount += 2;
+                    else if (modInt > 0.01) roughCount += 1;
+                  }
+                  const err = Math.abs(newTotal - targetSec);
+
+                  const isBetter = !bestMove ||
+                    delta < bestMove.delta - 1e-6 ||
+                    (Math.abs(delta - bestMove.delta) <= 1e-6 && roughCount < bestMove.roughCount) ||
+                    (Math.abs(delta - bestMove.delta) <= 1e-6 && roughCount === bestMove.roughCount && err < bestMove.err);
+
+                  if (isBetter) {
+                    bestMove = { delta, roughCount, err, dists: testDists };
+                  }
+                }
+              }
+            }
+          }
+          if (bestMove) break;
+        }
+
+        if (bestMove) {
+          for (let m = 0; m < N; m++) dists[m] = bestMove.dists[m];
+          boundaryDeltaApplied = bestMove.delta;
+        }
+      }
+
+      // Phase 3: Exact Residual Guarantee Fallback
+      let usedFractionalFallback = false;
+      let residualTotal = calcTotal(dists, paces);
+      if (Math.round(residualTotal) !== targetSec) {
+        const lastAdj = (targetSec - residualTotal) / dists[N - 1];
+        const candidateLast = paces[N - 1] + lastAdj;
+        if (candidateLast >= MIN_PACE_SEC && candidateLast <= MAX_PACE_SEC) {
+          paces[N - 1] = candidateLast;
+          usedFractionalFallback = true;
+        } else {
+          const evenShift = (targetSec - residualTotal) / currentRaceDist;
+          for (let m = 0; m < N; m++) {
+            paces[m] = Math.max(MIN_PACE_SEC, Math.min(MAX_PACE_SEC, paces[m] + evenShift));
+          }
+          usedFractionalFallback = true;
+        }
+      }
+
+      // Commit exact-second distances and paces
+      let sumOthers = 0;
+      for (let m = 0; m < N - 1; m++) {
+        segments[m].dist = +dists[m].toFixed(2);
+        segments[m].paceSec = paces[m];
+        sumOthers += segments[m].dist;
+      }
+      segments[N - 1].dist = +(currentRaceDist - sumOthers).toFixed(4);
+      segments[N - 1].paceSec = paces[N - 1];
+
+      const modeName = mode === 'negative' ? '네거티브' : '포지티브';
+      const modeIcon = mode === 'negative' ? '📈' : '📉';
+
+      if (boundaryDeltaApplied > 0) {
+        const deltaStr = boundaryDeltaApplied.toFixed(2).replace(/\.?0+$/, '');
+        setReverseFitNote(`✓ 정수 초 페이스를 유지하면서 목표 시간(${targetTimeLabel})에 정확히 맞추기 위해 구간 경계 거리를 ±${deltaStr}km 미세 조정했습니다.`);
+      } else if (usedFractionalFallback) {
+        setReverseFitNote(`✓ 목표 시간(${targetTimeLabel})에 1초 오차 없이 맞추기 위해 마지막 구간 페이스를 ${formatPace(segments[N - 1].paceSec)}/km로 정밀 조정했습니다.`);
+      } else {
+        setReverseFitNote(`✓ 기존 구간 거리를 유지한 채 목표 시간(${targetTimeLabel})에 1초 오차 없이 ${modeName} 스플릿을 맞췄습니다.`);
+      }
+
+      markAiEvaluationStale();
+      renderSimulator();
+      showToast(`목표 시간(${targetTimeLabel})에 1초 오차 없이 ${modeName} 스플릿을 자동 완성했습니다!${autoSplitMsg}`, modeIcon);
+    }
+
+    function applyPreset(type) {
+      const currentTotal = segments.reduce((acc, s) => acc + s.dist * s.paceSec, 0);
+      const basePace = Math.max(MIN_PACE_SEC, Math.min(MAX_PACE_SEC, Math.round(currentTotal / currentRaceDist)));
+
+      if (type === 'single') {
+        segments = [{ dist: currentRaceDist, paceSec: basePace }];
+      } else if (type === 'half_split') {
+        const half = Math.round(currentRaceDist / 2);
+        segments = [
+          { dist: half, paceSec: Math.min(MAX_PACE_SEC, basePace + 3) },
+          { dist: +(currentRaceDist - half).toFixed(4), paceSec: Math.max(MIN_PACE_SEC, basePace - 3) }
+        ];
+      } else if (type === 'three_split') {
+        const dists = buildThreeSplitDistances(currentRaceDist);
+        segments = [
+          { dist: dists[0], paceSec: Math.min(MAX_PACE_SEC, basePace + 5) },
+          { dist: dists[1], paceSec: basePace },
+          { dist: dists[2], paceSec: Math.max(MIN_PACE_SEC, basePace - 5) }
+        ];
+      }
+
+      clearReverseFitNote();
+      markAiEvaluationStale();
+      renderSimulator();
+      showToast("선택한 구간 프리셋이 적용되었습니다!", "⚡");
+    }
+
+    function distributeEvenly() {
+      const count = segments.length;
+      const even = Math.max(0.5, Math.round((currentRaceDist / count) * 2) / 2);
+      let sum = 0;
+      for (let i = 0; i < count - 1; i++) {
+        const maxAllow = +(currentRaceDist - sum - (count - 1 - i) * 0.5).toFixed(2);
+        segments[i].dist = Math.max(0.5, Math.min(even, maxAllow));
+        sum += segments[i].dist;
+      }
+      segments[count - 1].dist = Math.max(0.5, +(currentRaceDist - sum).toFixed(4));
+      clearReverseFitNote();
+      markAiEvaluationStale();
+    }
+
+    function insertSegmentAt(targetIdx) {
+      if (segments.length >= MAX_SEGMENTS) {
+        showToast(`최대 ${MAX_SEGMENTS}구간까지만 분할할 수 있습니다.`, "⚠️");
+        return;
+      }
+      const targetSeg = segments[targetIdx];
+      if (targetSeg.dist < 1.0) {
+        showToast("해당 구간 거리가 1km 미만이라 더 분할할 수 없습니다.", "⚠️");
+        return;
+      }
+
+      let firstHalf = Math.round(targetSeg.dist / 2);
+      if (firstHalf < 0.5) firstHalf = +(targetSeg.dist / 2).toFixed(1);
+      if (targetSeg.dist - firstHalf < 0.5) firstHalf = +(targetSeg.dist / 2).toFixed(2);
+      const secondHalf = +(targetSeg.dist - firstHalf).toFixed(4);
+
+      targetSeg.dist = firstHalf;
+      segments.splice(targetIdx + 1, 0, {
+        dist: secondHalf,
+        paceSec: Math.max(MIN_PACE_SEC, Math.round(targetSeg.paceSec) - 2)
+      });
+
+      clearReverseFitNote();
+      markAiEvaluationStale();
+      renderSimulator();
+      showToast(`구간 ${targetIdx + 1} 뒤에 새 구간이 분할되었습니다! (현재 ${segments.length}/${MAX_SEGMENTS}구간)`, "➕");
+    }
+
+    function deleteSegmentAt(idx) {
+      if (segments.length <= 1) {
+        showToast("최소 1개 구간은 유지되어야 합니다.", "⚠️");
+        return;
+      }
+      const removedDist = segments[idx].dist;
+      segments.splice(idx, 1);
+      const absorbIdx = idx > 0 ? idx - 1 : segments.length - 1;
+      segments[absorbIdx].dist = +(segments[absorbIdx].dist + removedDist).toFixed(4);
+      clearReverseFitNote();
+      markAiEvaluationStale();
+      renderSimulator();
+      showToast(`구간 ${idx + 1}이(가) 삭제되고 인접 구간에 거리가 합산되었습니다.`, "🗑️");
+    }
+
+    // 60fps In-Place Distance Slider with Unconditional Magnetic Snap (±0.18km to integer km)
+    function onDistSliderInput(idx, rawValue, sliderEl) {
+      if (segments.length === 1 || idx === segments.length - 1) return;
+      let val = parseFloat(rawValue);
+      if (isNaN(val)) return;
+
+      let otherSum = 0;
+      for (let i = 0; i < segments.length - 1; i++) {
+        if (i !== idx) otherSum += segments[i].dist;
+      }
+
+      const maxAllowed = +(currentRaceDist - otherSum - 0.5).toFixed(2);
+      if (val < 0.5) val = 0.5;
+      if (val > maxAllowed) val = maxAllowed;
+
+      let snapped = false;
+      const nearestInt = Math.round(val);
+      if (nearestInt >= 1 && nearestInt <= maxAllowed && Math.abs(val - nearestInt) <= 0.18) {
+        val = nearestInt;
+        snapped = true;
+      }
+
+      if (sliderEl) {
+        sliderEl.value = val;
+        sliderEl.classList.toggle('snapped-thumb', snapped);
+      }
+
+      segments[idx].dist = +val.toFixed(2);
+      segments[segments.length - 1].dist = +(currentRaceDist - otherSum - segments[idx].dist).toFixed(4);
+
+      clearReverseFitNote();
+      markAiEvaluationStale();
+      updateSegmentDOMInPlace();
+      updateSimulationOutputs();
+    }
+
+    function nudgeDist(idx, delta) {
+      if (idx === segments.length - 1) return;
+      const sliderEl = document.getElementById(`dist-slider-${idx}`);
+      onDistSliderInput(idx, +(segments[idx].dist + delta).toFixed(2), sliderEl);
+      if (sliderEl) sliderEl.classList.remove('snapped-thumb');
+    }
+
+    // 60fps In-Place Pace Slider with Unconditional Magnetic Snap (±1.2s to 5-second marks)
+    function onPaceSliderInput(idx, rawValue, sliderEl) {
+      let val = parseFloat(rawValue);
+      if (isNaN(val)) return;
+
+      let snapped = false;
+      const nearestFive = Math.round(val / 5) * 5;
+      if (Math.abs(val - nearestFive) <= 1.2) {
+        val = nearestFive;
+        snapped = true;
+      } else {
+        val = Math.round(val);
+      }
+
+      val = Math.max(MIN_PACE_SEC, Math.min(MAX_PACE_SEC, val));
+
+      if (sliderEl) {
+        sliderEl.value = val;
+        sliderEl.classList.toggle('snapped-thumb', snapped);
+      }
+
+      segments[idx].paceSec = val;
+      clearReverseFitNote();
+      markAiEvaluationStale();
+      updateSegmentDOMInPlace();
+      updateSimulationOutputs();
+    }
+
+    function nudgePace(idx, deltaSec) {
+      const sliderEl = document.getElementById(`pace-slider-${idx}`);
+      const baseInt = Math.round(segments[idx].paceSec);
+      const newVal = Math.max(MIN_PACE_SEC, Math.min(MAX_PACE_SEC, baseInt + deltaSec));
+      segments[idx].paceSec = newVal;
+      if (sliderEl) {
+        sliderEl.value = newVal;
+        sliderEl.classList.remove('snapped-thumb');
+      }
+      clearReverseFitNote();
+      markAiEvaluationStale();
+      updateSegmentDOMInPlace();
+      updateSimulationOutputs();
+    }
+
+    function updateSegmentDOMInPlace() {
+      let cumDist = 0;
+      let cumTimeSec = 0;
+
+      segments.forEach((seg, idx) => {
+        const startKm = cumDist;
+        cumDist = +(cumDist + seg.dist).toFixed(4);
+        const endKm = cumDist;
+        const segTimeSec = seg.dist * seg.paceSec;
+        cumTimeSec += segTimeSec;
+
+        const rangeEl = document.getElementById(`seg-range-${idx}`);
+        const timeEl = document.getElementById(`seg-time-${idx}`);
+        const cumTimeEl = document.getElementById(`seg-cumtime-${idx}`);
+        const distBadgeEl = document.getElementById(`seg-dist-badge-${idx}`);
+        const distSliderEl = document.getElementById(`dist-slider-${idx}`);
+        const paceBadgeEl = document.getElementById(`seg-pace-badge-${idx}`);
+
+        if (rangeEl) rangeEl.innerText = `${startKm.toFixed(1)}K ~ ${endKm.toFixed(2)}K`;
+        if (timeEl) timeEl.innerText = formatTime(segTimeSec);
+        if (cumTimeEl) cumTimeEl.innerText = formatTime(cumTimeSec);
+        if (distBadgeEl) {
+          const isInt = Math.abs(seg.dist - Math.round(seg.dist)) < 0.01;
+          distBadgeEl.innerText = `${isInt ? Math.round(seg.dist) + '.0' : seg.dist.toFixed(2)} km`;
+        }
+        if (distSliderEl && idx === segments.length - 1) {
+          distSliderEl.value = seg.dist;
+        }
+        if (paceBadgeEl) paceBadgeEl.innerText = `${formatPace(seg.paceSec)}/km`;
+      });
+    }
+
+    function renderSimulator() {
+      const listEl = document.getElementById('segments-list');
+      if (!listEl) return;
+      listEl.innerHTML = '';
+
+      let cumDist = 0;
+      let cumTimeSec = 0;
+
+      segments.forEach((seg, idx) => {
+        const startKm = cumDist;
+        cumDist = +(cumDist + seg.dist).toFixed(4);
+        const endKm = cumDist;
+        const segTimeSec = seg.dist * seg.paceSec;
+        cumTimeSec += segTimeSec;
+        const isLast = (idx === segments.length - 1);
+        const isInt = Math.abs(seg.dist - Math.round(seg.dist)) < 0.01;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = "space-y-1.5";
+        wrapper.innerHTML = `
+          <!-- Segment Card -->
+          <div class="bg-slate-950/95 p-4 rounded-2xl border border-slate-800 hover:border-slate-700 transition shadow-md space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-800/80 pb-2.5 gap-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="px-2.5 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-extrabold text-xs rounded-lg">
+                  구간 ${idx + 1}
+                </span>
+                <span id="seg-range-${idx}" class="text-sm font-black text-white">
+                  ${startKm.toFixed(1)}K ~ ${endKm.toFixed(2)}K
+                </span>
+                <span class="text-xs text-slate-400">
+                  (소요 <strong id="seg-time-${idx}" class="text-slate-200">${formatTime(segTimeSec)}</strong> · 누적 <strong id="seg-cumtime-${idx}" class="text-indigo-400">${formatTime(cumTimeSec)}</strong>)
+                </span>
+              </div>
+
+              <button type="button" onclick="deleteSegmentAt(${idx})"
+                ${segments.length <= 1 ? 'disabled class="opacity-30 cursor-not-allowed px-2.5 py-1 rounded-lg bg-slate-900 text-slate-500 text-xs font-bold shrink-0"' : 'class="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/30 text-xs font-bold transition flex items-center gap-1 shrink-0"'}
+                title="이 구간 삭제">
+                <span>🗑️ 삭제</span>
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center pt-1">
+              <!-- Distance Slider (5 cols) -->
+              <div class="lg:col-span-5 space-y-1.5">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="text-slate-400 font-semibold whitespace-nowrap">
+                    📏 거리 ${isLast && segments.length > 1 ? '<span class="text-[10px] text-amber-400 ml-1">(잔여 자동)</span>' : ''}
+                  </span>
+                  <div class="flex items-center gap-1">
+                    ${!isLast ? `<button type="button" onclick="nudgeDist(${idx}, -0.5)" class="px-2 sm:px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded-md text-slate-200 font-bold transition select-none touch-manipulation">-0.5K</button>` : ''}
+                    <span id="seg-dist-badge-${idx}" class="font-black text-indigo-300 bg-indigo-950/90 px-2 sm:px-2.5 py-0.5 rounded-lg border border-indigo-500/40 min-w-[62px] text-center">
+                      ${isInt ? Math.round(seg.dist) + '.0' : seg.dist.toFixed(2)} km
+                    </span>
+                    ${!isLast ? `<button type="button" onclick="nudgeDist(${idx}, 0.5)" class="px-2 sm:px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded-md text-slate-200 font-bold transition select-none touch-manipulation">+0.5K</button>` : ''}
+                  </div>
+                </div>
+                <input id="dist-slider-${idx}" type="range" min="0.5" max="${currentRaceDist}" step="0.05" value="${seg.dist}"
+                  ${isLast ? 'disabled class="opacity-35 cursor-not-allowed"' : ''}
+                  oninput="onDistSliderInput(${idx}, this.value, this)"
+                  onchange="this.classList.remove('snapped-thumb')">
+                <div class="flex justify-between text-[10px] text-slate-500 px-1">
+                  <span>0.5K</span>
+                  <span>${(currentRaceDist * 0.25).toFixed(0)}K</span>
+                  <span>${(currentRaceDist * 0.5).toFixed(0)}K</span>
+                  <span>${(currentRaceDist * 0.75).toFixed(0)}K</span>
+                  <span>${currentRaceDist.toFixed(1)}K</span>
+                </div>
+              </div>
+
+              <!-- Pace Slider (7 cols) -->
+              <div class="lg:col-span-7 space-y-1.5">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="text-slate-400 font-semibold whitespace-nowrap">⚡ 페이스</span>
+                  <div class="flex items-center gap-1">
+                    <button type="button" onclick="nudgePace(${idx}, -5)" class="px-2 sm:px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded-md text-emerald-300 font-bold transition select-none touch-manipulation">-5"</button>
+                    <button type="button" onclick="nudgePace(${idx}, -1)" class="px-2 sm:px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded-md text-white font-bold transition select-none touch-manipulation">-1"</button>
+                    <span id="seg-pace-badge-${idx}" class="text-sm font-black text-emerald-400 bg-emerald-950/90 px-2 sm:px-3 py-0.5 rounded-lg border border-emerald-500/40 min-w-[78px] text-center">
+                      ${formatPace(seg.paceSec)}/km
+                    </span>
+                    <button type="button" onclick="nudgePace(${idx}, 1)" class="px-2 sm:px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded-md text-white font-bold transition select-none touch-manipulation">+1"</button>
+                    <button type="button" onclick="nudgePace(${idx}, 5)" class="px-2 sm:px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded-md text-rose-300 font-bold transition select-none touch-manipulation">+5"</button>
+                  </div>
+                </div>
+                <input id="pace-slider-${idx}" type="range" class="pace-slider" min="${MIN_PACE_SEC}" max="${MAX_PACE_SEC}" step="0.2" value="${seg.paceSec}"
+                  oninput="onPaceSliderInput(${idx}, this.value, this)"
+                  onchange="this.classList.remove('snapped-thumb')">
+                <div class="flex justify-between text-[10px] text-slate-500 px-1">
+                  <span>3'00"</span>
+                  <span>4'00"</span>
+                  <span>5'00"</span>
+                  <span>6'00"</span>
+                  <span>7'30"</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Positional Insert Divider Button -->
+          ${segments.length < MAX_SEGMENTS ? `
+          <div class="relative py-1.5 flex items-center justify-center group">
+            <div class="w-full border-t border-dashed border-slate-800 group-hover:border-emerald-500/50 transition"></div>
+            <button type="button" onclick="insertSegmentAt(${idx})" class="absolute px-3 py-0.5 rounded-full bg-slate-900 hover:bg-emerald-600 text-slate-400 hover:text-white border border-slate-700 hover:border-emerald-400 text-[11px] font-extrabold transition shadow-sm flex items-center gap-1">
+              <span>+ 여기에 구간 분할 추가 (구간 ${idx + 1} 쪼개기)</span>
+            </button>
+          </div>` : ''}
+        `;
+        listEl.appendChild(wrapper);
+      });
+
+      updateSimulationOutputs();
+    }
+
+    function getElapsedTimeAtKm(targetKm) {
+      let accDist = 0;
+      let accTime = 0;
+      for (let i = 0; i < segments.length; i++) {
+        const seg = segments[i];
+        if (accDist + seg.dist >= targetKm) {
+          const remain = targetKm - accDist;
+          accTime += remain * seg.paceSec;
+          return accTime;
+        }
+        accDist += seg.dist;
+        accTime += seg.dist * seg.paceSec;
+      }
+      return accTime;
+    }
+
+    function classifySplitPattern() {
+      if (segments.length <= 1) return { type: 'even', label: '⚖️ 단일 이븐 페이스' };
+      const first = segments[0].paceSec;
+      const last = segments[segments.length - 1].paceSec;
+      const diff = first - last; // positive => getting faster (negative split)
+      if (Math.abs(diff) < 0.8) return { type: 'even', label: '⚖️ 이븐 스플릿' };
+      if (diff > 0) return { type: 'negative', label: '📈 네거티브 스플릿' };
+      return { type: 'positive', label: '📉 포지티브 스플릿' };
+    }
+
+    function updateSimulationOutputs() {
+      let totalTimeSec = 0;
+      let splitRowsHtml = '';
+      let visualBarsHtml = '';
+
+      const paces = segments.map(s => s.paceSec);
+      const minPace = Math.min(...paces);
+      const maxPace = Math.max(...paces);
+      const paceDiff = maxPace - minPace;
+      const effectiveSpan = Math.max(paceDiff, 4); // amplifies subtle 5~10s differences cleanly
+
+      segments.forEach((seg, idx) => {
+        const segTime = seg.dist * seg.paceSec;
+        totalTimeSec += segTime;
+
+        splitRowsHtml += `
+          <div class="flex justify-between items-center py-1 border-b border-slate-800/60 last:border-0 gap-2">
+            <span class="text-slate-300 font-medium truncate">구간 ${idx + 1} (${seg.dist.toFixed(1)}K @ <strong class="text-emerald-400">${formatPace(seg.paceSec)}</strong>)</span>
+            <div class="text-right shrink-0">
+              <span class="text-slate-400 mr-1.5">${formatTime(segTime)}</span>
+              <span class="font-bold text-white bg-slate-800 px-2 py-0.5 rounded">${formatTime(totalTimeSec)}</span>
+            </div>
+          </div>
+        `;
+
+        // Dynamic Relative Scaling (32% ~ 98%) for Visual Pace Profile Bars
+        const widthPct = Math.max(6, (seg.dist / currentRaceDist) * 100);
+        let heightPct = 65;
+        let barGradient = 'from-indigo-600 to-sky-400';
+
+        if (paceDiff > 0.05) {
+          const ratio = (maxPace - seg.paceSec) / effectiveSpan; // 0 = slowest, 1 = fastest
+          heightPct = Math.round(32 + ratio * 66);
+
+          if (ratio >= 0.67) {
+            barGradient = 'from-emerald-600 to-teal-400';
+          } else if (ratio >= 0.33) {
+            barGradient = 'from-indigo-600 to-sky-400';
+          } else {
+            barGradient = 'from-slate-600 to-indigo-500';
+          }
+        }
+
+        visualBarsHtml += `
+          <div style="width: ${widthPct}%; height: ${heightPct}%;" class="bg-gradient-to-t ${barGradient} rounded-t-xl relative transition-all duration-200 flex flex-col justify-between p-1.5 sm:p-2 text-[10px] sm:text-xs font-extrabold text-white shadow-md border-t border-white/25 overflow-hidden">
+            <span class="truncate leading-tight drop-shadow">${formatPace(seg.paceSec)}</span>
+            <span class="text-[9px] sm:text-[10px] text-white/85 font-bold truncate">${seg.dist.toFixed(1)}K</span>
+          </div>
+        `;
+      });
+
+      const avgPaceSec = totalTimeSec / currentRaceDist;
+      const splitPattern = classifySplitPattern();
+
+      document.getElementById('result-total-time').innerText = formatTime(totalTimeSec);
+      document.getElementById('result-avg-pace').innerText = `${formatPace(avgPaceSec)} /km`;
+      document.getElementById('result-split-pattern').innerText = splitPattern.label;
+      document.getElementById('split-table-body').innerHTML = splitRowsHtml;
+      document.getElementById('pace-visual-bars').innerHTML = visualBarsHtml;
+
+      const rangeLabel = document.getElementById('pace-chart-range-label');
+      if (rangeLabel) {
+        rangeLabel.innerText = paceDiff > 0.05
+          ? `최고 ${formatPace(minPace)} · 최저 ${formatPace(maxPace)} (편차 ${paceDiff.toFixed(1).replace(/\.0$/, '')}초/km)`
+          : `전 구간 동일 페이스 (${formatPace(minPace)}/km)`;
+      }
+
+      // PB Comparison Badge (only when matching distance PB exists in raceHistory)
+      const pbWrap = document.getElementById('result-pb-badge-wrap');
+      if (pbWrap) {
+        const curType = TYPE_BY_DIST[currentRaceDist];
+        const pbSec = curType ? getBestPbSecondsByType(curType) : null;
+        if (pbSec) {
+          const diffSec = Math.round(totalTimeSec - pbSec);
+          if (diffSec < 0) {
+            pbWrap.innerHTML = `<span class="inline-block text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">🔥 내 ${curType} PB(${formatTimeCompact(pbSec)}) 대비 -${formatTime(Math.abs(diffSec))} 단축!</span>`;
+          } else if (diffSec === 0) {
+            pbWrap.innerHTML = `<span class="inline-block text-xs font-bold px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">🎯 내 ${curType} PB(${formatTimeCompact(pbSec)})와 동일</span>`;
+          } else {
+            pbWrap.innerHTML = `<span class="inline-block text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700">🛡️ 내 ${curType} PB(${formatTimeCompact(pbSec)}) 대비 +${formatTime(diffSec)}</span>`;
+          }
+        } else {
+          pbWrap.innerHTML = '';
+        }
+      }
+
+      // 5km Checkpoints & Energy Gel Strategy
+      const cpBox = document.getElementById('checkpoint-5k-box');
+      if (cpBox) {
+        const marks = [5, 10, 15, 20, 25, 30, 35, 40].filter(m => m < currentRaceDist);
+        const badges = marks.map(m => {
+          const t = formatTimeCompact(getElapsedTimeAtKm(m));
+          return `<span class="px-2 py-0.5 bg-slate-900 border border-slate-700 rounded text-slate-200"><strong>${m}K</strong> ${t}</span>`;
+        }).join(' ');
+
+        let gelAdvice = '';
+        if (currentRaceDist === 21.0975) {
+          gelAdvice = `🍌 <strong>하프 보급 팁:</strong> 출발 15~20분 전 에너지젤 1포 + <strong>10~11km(${formatTimeCompact(getElapsedTimeAtKm(10.5))} 부근)</strong> 추가 1포 권장`;
+        } else if (currentRaceDist === 42.195) {
+          gelAdvice = `🍌 <strong>풀코스 보급 팁:</strong> 출발 전 1포 + <strong>8K · 16K · 24K · 32K</strong> 구간마다 정기 보급으로 후반 에너지 고갈 방지`;
+        } else if (currentRaceDist === 10) {
+          gelAdvice = `🍌 <strong>10K 보급 팁:</strong> 출발 30분 전 가벼운 탄수화물 섭취 후 레이스 중 5K 급수대에서 수분 보충 권장`;
+        } else {
+          gelAdvice = `🍌 <strong>5K 보급 팁:</strong> 충분한 워밍업 후 레이스 중 별도 보급 없이 호흡과 리듬에 집중`;
+        }
+
+        cpBox.innerHTML = `
+          ${badges ? `<div class="flex flex-wrap gap-1 items-center">${badges}</div>` : ''}
+          <div class="text-indigo-300 ${badges ? 'pt-1.5 border-t border-slate-800/80' : ''}">${gelAdvice}</div>
+        `;
+      }
+
+      renderBasicEvaluation(totalTimeSec, avgPaceSec, minPace, maxPace, splitPattern);
+      saveStateToLocalStorage();
+    }
+
+    function copyPaceBandToClipboard() {
+      const totalSec = segments.reduce((acc, s) => acc + s.dist * s.paceSec, 0);
+      const avgPace = formatPace(totalSec / currentRaceDist);
+      let text = `🏃 [레이스 플래너] 페이스밴드\n`;
+      text += `• 종목: ${currentRaceDist}km | 목표: ${formatTimeCompact(totalSec)} (평균 ${avgPace}/km)\n`;
+      let cumD = 0;
+      let cumT = 0;
+      segments.forEach((s, i) => {
+        const start = cumD.toFixed(1);
+        cumD += s.dist;
+        cumT += s.dist * s.paceSec;
+        text += `• ${i + 1}구간 (${start}~${cumD.toFixed(1)}K): ${formatPace(s.paceSec)}/km → 누적 ${formatTimeCompact(cumT)}\n`;
+      });
+
+      const marks = [5, 10, 15, 20, 25, 30, 35, 40].filter(m => m < currentRaceDist);
+      if (marks.length > 0) {
+        text += `⏱️ 5K 체크포인트: ` + marks.map(m => `${m}K(${formatTimeCompact(getElapsedTimeAtKm(m))})`).join(' / ');
+      }
+
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast("페이스밴드가 클립보드에 복사되었습니다!", "📋");
+      } catch (err) {
+        showToast("복사에 실패했습니다. 다시 시도해 주세요.", "⚠️");
+      }
+      document.body.removeChild(ta);
+    }
+
+    // =====================================================
+    // 7. SAVED PLANS MANAGEMENT
+    // =====================================================
+    function renderSavedPlans() {
+      const container = document.getElementById('saved-plans-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (savedPlans.length === 0) {
+        container.innerHTML = `<span class="text-[11px] text-slate-500">아직 저장된 전략이 없습니다. 위에서 플랜을 저장해 보세요.</span>`;
+        return;
+      }
+
+      savedPlans.forEach((plan, idx) => {
+        const chip = document.createElement('div');
+        chip.className = "inline-flex items-center bg-slate-950 border border-slate-800 hover:border-indigo-500/40 rounded-xl overflow-hidden text-xs transition";
+        chip.innerHTML = `
+          <button type="button" onclick="loadSavedPlan(${idx})" class="px-2.5 py-1.5 text-slate-200 hover:text-indigo-300 font-bold transition">
+            📌 ${escapeHtml(plan.title)}
+          </button>
+          <button type="button" onclick="deleteSavedPlan(${idx})" class="px-2 py-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-900 border-l border-slate-800 font-bold transition" title="저장 전략 삭제">
+            ✕
+          </button>
+        `;
+        container.appendChild(chip);
+      });
+    }
+
+    function saveCurrentPlan() {
+      const titleInput = document.getElementById('plan-title-input');
+      const totalSec = segments.reduce((acc, s) => acc + s.dist * s.paceSec, 0);
+      const curType = TYPE_BY_DIST[currentRaceDist] || `${currentRaceDist}K`;
+      const title = (titleInput && titleInput.value.trim())
+        ? titleInput.value.trim()
+        : `${curType} ${formatTimeCompact(totalSec)} 플랜`;
+
+      savedPlans.unshift({
+        title,
+        dist: currentRaceDist,
+        segments: JSON.parse(JSON.stringify(segments))
+      });
+      if (titleInput) titleInput.value = '';
+      renderSavedPlans();
+      saveStateToLocalStorage();
+      showToast(`'${title}' 전략이 저장되었습니다!`, "💾");
+    }
+
+    function loadSavedPlan(idx) {
+      const plan = savedPlans[idx];
+      if (!plan) return;
+      segments = JSON.parse(JSON.stringify(plan.segments));
+      clearReverseFitNote();
+      markAiEvaluationStale();
+      selectDistance(plan.dist, true);
+      showToast(`'${plan.title}' 전략을 불러왔습니다!`, "📂");
+    }
+
+    function deleteSavedPlan(idx) {
+      const removed = savedPlans.splice(idx, 1)[0];
+      renderSavedPlans();
+      saveStateToLocalStorage();
+      if (removed) showToast(`'${removed.title}' 전략을 삭제했습니다.`, "🗑️");
+    }
+
+    // =====================================================
+    // 8. RIEGEL FORMULA & BASIC STRATEGY EVALUATION
+    // =====================================================
+    function getQualifyingRecords() {
+      // Qualifying records for evaluation: 10K, Half, Full (at least 1 required)
+      return raceHistory.filter(r => {
+        if (!['10K', 'Half', 'Full'].includes(r.type)) return false;
+        const sec = parseTimeToSeconds(r.time);
+        return sec && sec >= 600;
+      });
+    }
+
+    function predictTimeRiegel(recordSec, recordDist, targetDist) {
+      return recordSec * Math.pow(targetDist / recordDist, RIEGEL_EXPONENT);
+    }
+
+    // Picks the strongest Riegel baseline (preferring same-distance PB if available, otherwise fastest equivalent)
+    function getBestBaselineForDist(targetDist) {
+      const qualifying = getQualifyingRecords();
+      if (qualifying.length === 0) return null;
+
+      const targetType = TYPE_BY_DIST[targetDist];
+      let bestSame = null;
+      let bestOverall = null;
+
+      qualifying.forEach(r => {
+        const recSec = parseTimeToSeconds(r.time);
+        const recDist = DIST_BY_TYPE[r.type];
+        const predictedSec = predictTimeRiegel(recSec, recDist, targetDist);
+        const item = { record: r, recSec, recDist, predictedSec };
+
+        if (r.type === targetType) {
+          if (!bestSame || recSec < bestSame.recSec) bestSame = item;
+        }
+        if (!bestOverall || predictedSec < bestOverall.predictedSec) bestOverall = item;
+      });
+
+      // If user has a faster equivalent from another distance, use the faster predicted capability
+      if (bestSame && bestOverall && bestOverall.predictedSec < bestSame.predictedSec) {
+        return { ...bestOverall, sameDistPb: bestSame };
+      }
+      return bestSame ? { ...bestSame, sameDistPb: bestSame } : { ...bestOverall, sameDistPb: null };
+    }
+
+    function renderBasicEvaluation(totalTimeSec, avgPaceSec, minPace, maxPace, splitPattern) {
+      const badge = document.getElementById('verdict-badge');
+      const box = document.getElementById('verdict-content');
+      const footer = document.getElementById('eval-baseline-footer');
+      const summaryEl = document.getElementById('eval-baseline-summary');
+      if (!badge || !box) return;
+
+      const baseline = getBestBaselineForDist(currentRaceDist);
+
+      // Empty state when no 10K / Half / Full records exist
+      if (!baseline) {
+        badge.className = "px-3 py-1.5 text-xs font-extrabold rounded-full bg-slate-800 text-slate-400 border border-slate-700";
+        badge.innerText = "평가 대기 중 (기록 필요)";
+        if (footer) footer.classList.add('hidden');
+
+        box.innerHTML = `
+          <button type="button" onclick="goToAddRaceRecord()" class="w-full text-left group p-5 sm:p-6 rounded-2xl bg-slate-950/90 hover:bg-indigo-950/40 border-2 border-dashed border-slate-700 hover:border-indigo-400 transition space-y-3 cursor-pointer">
+            <div class="flex items-start gap-3.5">
+              <div class="w-11 h-11 rounded-xl bg-indigo-500/15 group-hover:bg-indigo-500/25 border border-indigo-500/30 flex items-center justify-center text-2xl shrink-0 transition">
+                🏆
+              </div>
+              <div class="space-y-1">
+                <div class="text-sm sm:text-base font-extrabold text-white group-hover:text-indigo-300 transition">
+                  대회 기록이 없어서 플랜을 평가할 수 없습니다
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                  <strong>10K, 하프, 풀코스</strong> 중 최소 1개 이상의 기록을 입력하면 내 현재 기량을 기준으로 이 레이스 플랜의 난이도와 성공 가능성을 자동으로 분석해 드립니다.
+                </p>
+              </div>
+            </div>
+            <div class="flex justify-end">
+              <span class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 group-hover:bg-indigo-500 text-white text-xs font-extrabold shadow-lg shadow-indigo-600/25 transition">
+                <span>➕ 클릭하여 대회 기록 입력하기</span>
+                <span>➔</span>
+              </span>
+            </div>
+          </button>
+        `;
+        return;
+      }
+
+      // Qualifying record exists -> Evaluate!
+      const predictedSec = baseline.predictedSec;
+      const ratioPct = ((totalTimeSec - predictedSec) / predictedSec) * 100; // negative = faster than predicted
+      const diffSec = Math.round(totalTimeSec - predictedSec);
+      const predPaceSec = predictedSec / currentRaceDist;
+
+      let html = '';
+
+      if (ratioPct < -5.5) {
+        badge.className = "px-3 py-1.5 text-xs font-extrabold rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40";
+        badge.innerText = "🚨 오버페이스 경고 (무리한 목표)";
+        html += `
+          <div class="p-4 rounded-xl bg-rose-950/40 border border-rose-500/30 space-y-1.5">
+            <div class="font-extrabold text-rose-300 text-xs sm:text-sm">1. 목표 난이도 진단: 예상 기량(${formatTimeCompact(predictedSec)}) 대비 ${Math.abs(ratioPct).toFixed(1)}% 빠름 (-${formatTime(Math.abs(diffSec))})</div>
+            <p class="text-xs text-slate-200 leading-relaxed">
+              기준 기록으로 산출한 권장 평균 페이스는 <strong>${formatPace(predPaceSec)}/km</strong>입니다. 현재 설정(${formatPace(avgPaceSec)}/km)은 현재 기량 대비 매우 공격적이어서 후반부 급격한 페이스 저하(봉크) 위험이 큽니다. km당 ${Math.max(3, Math.round(predPaceSec - avgPaceSec))}초 정도 보수적으로 조정하는 것을 권장합니다.
+            </p>
+          </div>
+        `;
+      } else if (ratioPct < -1.5) {
+        badge.className = "px-3 py-1.5 text-xs font-extrabold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40";
+        badge.innerText = "🔥 도전적 PB 타겟 (최상 컨디션 필요)";
+        html += `
+          <div class="p-4 rounded-xl bg-amber-950/35 border border-amber-500/30 space-y-1.5">
+            <div class="font-extrabold text-amber-300 text-xs sm:text-sm">1. 목표 난이도 진단: 예상 기량(${formatTimeCompact(predictedSec)}) 대비 ${Math.abs(ratioPct).toFixed(1)}% 도전적 (-${formatTime(Math.abs(diffSec))})</div>
+            <p class="text-xs text-slate-200 leading-relaxed">
+              기존 기록 대비 의미 있는 기록 단축을 노리는 <strong>공격적인 PB 도전 플랜</strong>입니다. 최근 훈련량이 충분하고 테이퍼링·날씨가 받쳐준다면 달성 가능하지만, 초반 오버페이스를 철저히 경계해야 합니다.
+            </p>
+          </div>
+        `;
+      } else if (ratioPct <= 2.5) {
+        badge.className = "px-3 py-1.5 text-xs font-extrabold rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40";
+        badge.innerText = "✅ 최적의 타겟 (높은 달성 가능성)";
+        html += `
+          <div class="p-4 rounded-xl bg-emerald-950/35 border border-emerald-500/30 space-y-1.5">
+            <div class="font-extrabold text-emerald-300 text-xs sm:text-sm">1. 목표 난이도 진단: 예상 기량(${formatTimeCompact(predictedSec)})과 완벽히 일치하는 스윗스팟</div>
+            <p class="text-xs text-slate-200 leading-relaxed">
+              내 실측 대회 기록을 바탕으로 산출한 최적 범위(<strong>${formatPace(predPaceSec)}/km</strong> 전후)에 정확히 부합하는 현실적이고 완성도 높은 플랜입니다. 레이스 당일 페이스 리듬만 잘 지키면 목표 달성이 매우 유력합니다.
+            </p>
+          </div>
+        `;
+      } else {
+        badge.className = "px-3 py-1.5 text-xs font-extrabold rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/40";
+        badge.innerText = "🛡️ 안정권 크루징 (여유 있는 완주)";
+        html += `
+          <div class="p-4 rounded-xl bg-sky-950/35 border border-sky-500/30 space-y-1.5">
+            <div class="font-extrabold text-sky-300 text-xs sm:text-sm">1. 목표 난이도 진단: 예상 기량(${formatTimeCompact(predictedSec)}) 대비 +${ratioPct.toFixed(1)}% 여유 (+${formatTime(diffSec)})</div>
+            <p class="text-xs text-slate-200 leading-relaxed">
+              체력적 여유를 넉넉히 확보한 안정적인 레이스 플랜입니다. 펀런, 페이스메이커, 혹은 후반부 강한 스퍼트를 노리는 빌드업 전략으로 적합합니다.
+            </p>
+          </div>
+        `;
+      }
+
+      // 2. Split Strategy Assessment
+      const gap = maxPace - minPace;
+      if (segments.length === 1) {
+        html += `
+          <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+            <div class="font-bold text-indigo-300 text-xs">2. 구간 배분 진단: 단일 이븐 페이스 (${formatPace(segments[0].paceSec)}/km)</div>
+            <p class="text-xs text-slate-300">전 구간을 일정한 속도로 밀고 나가는 정석 전략입니다. 초반 출발선 혼잡이나 흥분으로 목표보다 5~10초 이상 튀어나가지 않도록 1~2km 랩을 꼭 체크하세요.</p>
+          </div>
+        `;
+      } else if (gap > 20) {
+        html += `
+          <div class="p-3.5 rounded-xl bg-amber-950/35 border border-amber-500/30 space-y-1">
+            <div class="font-bold text-amber-300 text-xs">2. 구간 편차 주의: 최고·최저 페이스 차이 ${gap.toFixed(1).replace(/\.0$/, '')}초/km</div>
+            <p class="text-xs text-slate-200">구간별 속도 변화가 크면 리듬 전환 시 근피로가 가중될 수 있습니다. 코스 언덕 구간이 아니라면 구간 간 편차를 5~12초 이내로 완만하게 맞추는 것이 효율적입니다.</p>
+          </div>
+        `;
+      } else if (splitPattern.type === 'negative') {
+        html += `
+          <div class="p-3.5 rounded-xl bg-indigo-950/35 border border-indigo-500/30 space-y-1">
+            <div class="font-bold text-indigo-300 text-xs">2. 구간 배분 진단: 이상적인 네거티브 스플릿 (${formatPace(segments[0].paceSec)} → ${formatPace(segments[segments.length - 1].paceSec)})</div>
+            <p class="text-xs text-slate-200">초반 에너지를 아껴 후반부에 가속하는 마라톤 정석 배분입니다. 후반부 심리적 안정감과 완주 기록 단축에 매우 유리합니다.</p>
+          </div>
+        `;
+      } else if (splitPattern.type === 'positive') {
+        html += `
+          <div class="p-3.5 rounded-xl bg-amber-950/30 border border-amber-500/30 space-y-1">
+            <div class="font-bold text-amber-300 text-xs">2. 구간 배분 진단: 포지티브 스플릿 (${formatPace(segments[0].paceSec)} → ${formatPace(segments[segments.length - 1].paceSec)})</div>
+            <p class="text-xs text-slate-200">초반에 시간을 미리 벌어두고 후반에 버티는 전략입니다. 초반 페이스가 젖산 역치를 넘기지 않도록 보급과 호흡 관리에 각별히 신경 써 주세요.</p>
+          </div>
+        `;
+      } else {
+        html += `
+          <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+            <div class="font-bold text-indigo-300 text-xs">2. 구간 배분 진단: 균형 잡힌 이븐 스플릿</div>
+            <p class="text-xs text-slate-300">전 구간 편차 없이 일정한 리듬을 유지하는 효율적인 배분입니다.</p>
+          </div>
+        `;
+      }
+
+      // 3. Optional Heart Rate Insight (when any qualifying record includes avg HR)
+      const hrRecords = getQualifyingRecords().filter(r => r.hr && Number(r.hr) > 0);
+      if (hrRecords.length > 0) {
+        const refHrRec = baseline.record.hr ? baseline.record : hrRecords[0];
+        const hrVal = Number(refHrRec.hr);
+        let hrMsg = '';
+        if (hrVal <= 155) {
+          hrMsg = `기준 기록(${escapeHtml(refHrRec.name)} ${refHrRec.type})의 평균 심박수가 <strong>${hrVal} bpm</strong>으로 비교적 여유 있는 편입니다. 심폐 잠재력이 남아있어 조금 더 공격적인 목표에도 도전해 볼 만합니다.`;
+        } else if (hrVal <= 172) {
+          hrMsg = `기준 기록(${escapeHtml(refHrRec.name)} ${refHrRec.type})의 평균 심박수가 <strong>${hrVal} bpm</strong>으로 전형적인 레이스 강도를 보여주었습니다. 레이스 전반부에는 이보다 5~8 bpm 낮게 억제하며 출발하세요.`;
+        } else {
+          hrMsg = `기준 기록(${escapeHtml(refHrRec.name)} ${refHrRec.type})의 평균 심박수가 <strong>${hrVal} bpm</strong>으로 최대치에 가까운 전력 질주였습니다. 초반 무리한 가속을 피하고 수분·전해질 보급을 철저히 챙겨주세요.`;
+        }
+        html += `
+          <div class="p-3.5 rounded-xl bg-slate-950 border border-rose-500/25 space-y-1">
+            <div class="font-bold text-rose-300 text-xs">3. 심박 데이터 참고 (${hrVal} bpm 기준)</div>
+            <p class="text-xs text-slate-300 leading-relaxed">${hrMsg}</p>
+          </div>
+        `;
+      }
+
+      box.innerHTML = html;
+
+      // Update Baseline Footer
+      if (footer && summaryEl) {
+        footer.classList.remove('hidden');
+        const r = baseline.record;
+        const rPace = formatPace(baseline.recSec / baseline.recDist);
+        const hrText = r.hr ? ` · 평균 심박 ${r.hr} bpm` : '';
+        summaryEl.innerHTML = `
+          기준 기록: <strong class="text-white">${escapeHtml(r.name)} (${r.date})</strong> ·
+          <span class="text-indigo-300 font-bold">${r.type} ${r.time}</span> (${rPace}/km${hrText})
+          → 현재 종목(${TYPE_BY_DIST[currentRaceDist] || currentRaceDist + 'K'}) Riegel 환산 예측:
+          <strong class="text-emerald-400">${formatTimeCompact(predictedSec)}</strong> (${formatPace(predPaceSec)}/km)
+        `;
+      }
+    }
+
+    // =====================================================
+    // 9. AI DETAILED EVALUATION SECTION (GEMINI + FALLBACK)
+    // =====================================================
+    function updateAiModeBadge() {
+      const badge = document.getElementById('ai-mode-badge');
+      if (!badge) return;
+      if (aiConfig.proxyUrl) {
+        badge.innerText = "프록시 연동";
+        badge.classList.remove('hidden');
+      } else if (aiConfig.apiKey) {
+        badge.innerText = "API Key 연동";
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+    function openAiSettingsModal() {
+      document.getElementById('ai-proxy-url-input').value = aiConfig.proxyUrl || '';
+      document.getElementById('ai-api-key-input').value = aiConfig.apiKey || '';
+      document.getElementById('ai-settings-modal').classList.remove('hidden');
+    }
+
+    function closeAiSettingsModal() {
+      document.getElementById('ai-settings-modal').classList.add('hidden');
+    }
+
+    function saveAiSettings() {
+      aiConfig.proxyUrl = document.getElementById('ai-proxy-url-input').value.trim();
+      aiConfig.apiKey = document.getElementById('ai-api-key-input').value.trim();
+      try {
+        localStorage.setItem(AI_CONFIG_STORAGE_KEY, JSON.stringify(aiConfig));
+      } catch (e) {}
+      updateAiModeBadge();
+      closeAiSettingsModal();
+      showToast("AI 연결 설정이 저장되었습니다!", "⚙️");
+    }
+
+    function resetAiSettings() {
+      aiConfig = { proxyUrl: "", apiKey: "" };
+      try {
+        localStorage.removeItem(AI_CONFIG_STORAGE_KEY);
+      } catch (e) {}
+      updateAiModeBadge();
+      closeAiSettingsModal();
+      showToast("AI 연결 설정이 기본값으로 초기화되었습니다.", "🔄");
+    }
+
+    function loadAiSettings() {
+      try {
+        const raw = localStorage.getItem(AI_CONFIG_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          aiConfig.proxyUrl = parsed.proxyUrl || "";
+          aiConfig.apiKey = parsed.apiKey || "";
+        }
+      } catch (e) {}
+      updateAiModeBadge();
+    }
+
+    function buildAiEvaluationPrompt() {
+      const totalSec = segments.reduce((acc, s) => acc + s.dist * s.paceSec, 0);
+      const avgPace = formatPace(totalSec / currentRaceDist);
+      const curType = TYPE_BY_DIST[currentRaceDist] || `${currentRaceDist}km`;
+      const baseline = getBestBaselineForDist(currentRaceDist);
+
+      let cumD = 0;
+      const segLines = segments.map((s, i) => {
+        const start = cumD.toFixed(1);
+        cumD += s.dist;
+        return `- ${i + 1}구간 (${start}~${cumD.toFixed(1)}km, 거리 ${s.dist.toFixed(2)}km): ${formatPace(s.paceSec)}/km`;
+      }).join('\n');
+
+      const recordLines = raceHistory.slice(0, 12).map(r => {
+        const sec = parseTimeToSeconds(r.time);
+        const dist = DIST_BY_TYPE[r.type] || 10;
+        const pace = sec ? formatPace(sec / dist) : '-';
+        return `- ${r.date} | ${r.type} | ${r.name} | 기록 ${r.time} (평균 ${pace}/km)${r.hr ? ` | 평균심박 ${r.hr}bpm` : ''}${r.note ? ` | 메모: ${r.note}` : ''}`;
+      }).join('\n');
+
+      return `당신은 데이터 기반 마라톤 전문 코치입니다. 아래 러너의 실제 대회 기록과 현재 세운 레이스 플랜을 정밀 분석해 주세요.
+
+[현재 시뮬레이터 레이스 플랜]
+- 목표 종목: ${curType} (${currentRaceDist} km)
+- 예상 완주 기록: ${formatTimeCompact(totalSec)} (평균 페이스 ${avgPace}/km)
+- Riegel 공식 기준 예측: ${baseline ? `${formatTimeCompact(baseline.predictedSec)} (${formatPace(baseline.predictedSec / currentRaceDist)}/km)` : '없음'}
+- 구간별 계획 (${segments.length}구간):
+${segLines}
+
+[누적 대회 기록실]
+${recordLines}
+
+반드시 아래 3개 섹션만 깔끔한 JSON 객체 형식으로 응답해 주세요 (마크다운 코드블록 없이 순수 JSON만 반환):
+{
+  "headline": "한 줄 핵심 총평 (20자 내외)",
+  "realism": "1. 목표 현실성 및 심박/체력 추세 진단 (2~3문장, 실제 기록과 수치를 근거로 구체적으로)",
+  "risk": "2. 플랜의 강점 및 오버페이스·후반 급락 리스크 구간 지목 (2~3문장, 구체적인 km 구간 언급)",
+  "action": "3. 구간 페이스 수정 제안 및 레이스 실전·보급 전략 팁 (2~3문장, 바로 적용 가능한 수치 제시)"
+}`;
+    }
+
+    function buildBuiltInDetailedFallback() {
+      const totalSec = segments.reduce((acc, s) => acc + s.dist * s.paceSec, 0);
+      const avgPaceSec = totalSec / currentRaceDist;
+      const baseline = getBestBaselineForDist(currentRaceDist);
+      const predSec = baseline.predictedSec;
+      const predPaceSec = predSec / currentRaceDist;
+      const ratioPct = ((totalSec - predSec) / predSec) * 100;
+      const splitPattern = classifySplitPattern();
+
+      const paces = segments.map(s => s.paceSec);
+      const fastestIdx = paces.indexOf(Math.min(...paces));
+      const slowestIdx = paces.indexOf(Math.max(...paces));
+      const hrRecs = getQualifyingRecords().filter(r => r.hr && Number(r.hr) > 0);
+      const hrNote = hrRecs.length > 0
+        ? ` 참고로 ${hrRecs[0].name}(${hrRecs[0].type}) 평균 심박 ${hrRecs[0].hr} bpm 데이터를 감안하면 초반 심박 관리가 성패를 가릅니다.`
+        : ` 추후 대회 기록에 평균 심박수를 함께 기록하시면 심폐 여유도까지 더욱 정밀하게 진단할 수 있습니다.`;
+
+      let headline = "균형 잡힌 현실적 타겟 플랜";
+      let realism = `기준 기록(${baseline.record.name} ${baseline.record.type} ${baseline.record.time})으로 환산한 Riegel 예측은 ${formatTimeCompact(predSec)}(평균 ${formatPace(predPaceSec)}/km)입니다. 현재 설정하신 ${formatTimeCompact(totalSec)}(${formatPace(avgPaceSec)}/km)은 예측 대비 ${ratioPct > 0 ? '+' : ''}${ratioPct.toFixed(1)}% 수준으로 달성 가능성이 높습니다.${hrNote}`;
+      if (ratioPct < -5.5) {
+        headline = "후반 급락 주의 — 보수적 재조정 권장";
+        realism = `기준 기록 대비 목표가 ${Math.abs(ratioPct).toFixed(1)}% 빠르게 잡혀 있어 현재 기량 기준으로는 매우 높은 강도입니다. 특히 예측 페이스(${formatPace(predPaceSec)}/km)보다 km당 ${Math.round(predPaceSec - avgPaceSec)}초 빠른 속도를 장시간 버텨야 합니다.${hrNote}`;
+      } else if (ratioPct < -1.5) {
+        headline = "PB 경신에 도전하는 공격적 전략";
+        realism = `예상 기량(${formatTimeCompact(predSec)})보다 ${formatTime(Math.abs(Math.round(totalSec - predSec)))} 단축을 노리는 도전적인 플랜입니다. 최근 지구력 훈련과 충분한 테이퍼링이 뒷받침된다면 PB 경신이 가능합니다.${hrNote}`;
+      }
+
+      const risk = segments.length > 1
+        ? `현재 ${splitPattern.label} 구조에서 가장 빠른 구간은 ${fastestIdx + 1}구간(${formatPace(segments[fastestIdx].paceSec)}/km), 가장 여유로운 구간은 ${slowestIdx + 1}구간(${formatPace(segments[slowestIdx].paceSec)}/km)입니다. ${splitPattern.type === 'positive' ? '초반 속도가 빠른 만큼 70% 지점 이후 보폭이 급격히 줄어들지 않도록 주의해야 합니다.' : '전반부 페이스가 목표보다 빨라지지 않도록 워치 1km 랩 알림을 철저히 지켜주세요.'}`
+        : `단일 이븐 페이스(${formatPace(segments[0].paceSec)}/km)는 리듬 유지가 단순하지만, 출발 직후 1~2km에서 주변 러너에 휩쓸려 오버페이스할 위험이 가장 큽니다.`;
+
+      const gelPoint = currentRaceDist >= 40 ? '8K·16K·24K·32K' : currentRaceDist >= 20 ? '출발 전과 10~11K' : '출발 30분 전';
+      const action = ratioPct < -3
+        ? `전반 1구간 페이스를 지금보다 3~5초 늦춘 ${formatPace(Math.min(MAX_PACE_SEC, segments[0].paceSec + 4))}/km로 출발하고, 후반 컨디션이 남을 때 가속하는 네거티브 전략으로 수정해 보세요. 보급은 ${gelPoint} 지점에 맞춰 미리 챙기는 것이 안전합니다.`
+        : `현재 구간 배분을 유지하되 5K 체크포인트(${formatTimeCompact(getElapsedTimeAtKm(Math.min(5, currentRaceDist)))}) 통과 시 호흡이 편안한지 반드시 점검하세요. 에너지젤·수분은 ${gelPoint} 지점에서 목마르기 전에 선제 보급하는 것을 권장합니다.`;
+
+      return { headline, realism, risk, action, sourceLabel: "내장 정밀 분석 리포트 (오프라인 대체)" };
+    }
+
+    function renderAiEvaluationCards(result) {
+      const body = document.getElementById('ai-eval-body');
+      const staleBanner = document.getElementById('ai-stale-banner');
+      if (!body) return;
+      if (staleBanner) staleBanner.classList.add('hidden');
+
+      body.innerHTML = `
+        <div class="space-y-3 animate-pop">
+          <div class="flex flex-wrap items-center justify-between gap-2 bg-indigo-950/60 border border-indigo-500/40 rounded-xl px-4 py-3">
+            <div class="text-sm font-black text-white flex items-center gap-2">
+              <span>🎯</span>
+              <span>${escapeHtml(result.headline)}</span>
+            </div>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-900 text-indigo-300 border border-indigo-500/30">${escapeHtml(result.sourceLabel)}</span>
+          </div>
+
+          <div class="grid gap-2.5 text-xs">
+            <div class="bg-slate-950/90 border border-emerald-500/25 rounded-xl p-3.5 space-y-1">
+              <div class="font-extrabold text-emerald-300">1. 목표 현실성 및 심박·체력 진단</div>
+              <p class="text-slate-200 leading-relaxed">${escapeHtml(result.realism)}</p>
+            </div>
+            <div class="bg-slate-950/90 border border-amber-500/25 rounded-xl p-3.5 space-y-1">
+              <div class="font-extrabold text-amber-300">2. 플랜 강점 및 리스크 구간 분석</div>
+              <p class="text-slate-200 leading-relaxed">${escapeHtml(result.risk)}</p>
+            </div>
+            <div class="bg-slate-950/90 border border-indigo-500/30 rounded-xl p-3.5 space-y-1">
+              <div class="font-extrabold text-indigo-300">3. 페이스 수정 제안 및 실전·보급 팁</div>
+              <p class="text-slate-200 leading-relaxed">${escapeHtml(result.action)}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function requestAiDetailedEvaluation() {
+      const body = document.getElementById('ai-eval-body');
+      const btn = document.getElementById('btn-run-ai-eval');
+      if (!body || isAiEvaluating) return;
+
+      const qualifying = getQualifyingRecords();
+      if (qualifying.length === 0) {
+        body.innerHTML = `
+          <div class="bg-slate-950/90 border border-amber-500/35 rounded-xl p-4 space-y-3 text-xs">
+            <div class="font-bold text-amber-300">⚠️ AI 세부 평가를 받으려면 대회 기록이 최소 1개 이상 필요합니다.</div>
+            <p class="text-slate-400">10K, 하프, 풀코스 중 하나 이상의 기록을 먼저 등록하시면 AI가 내 기록을 기반으로 정밀 진단해 드립니다.</p>
+            <button type="button" onclick="goToAddRaceRecord()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-extrabold transition">
+              ➕ 대회 기록 입력하러 가기 ➔
+            </button>
+          </div>
+        `;
+        showToast("먼저 10K·하프·풀코스 중 1개 이상의 기록을 입력해 주세요!", "🏆");
+        return;
+      }
+
+      isAiEvaluating = true;
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add('opacity-60', 'cursor-wait');
+        btn.innerHTML = `<span>⏳ AI 정밀 분석 중...</span>`;
+      }
+
+      const staleBanner = document.getElementById('ai-stale-banner');
+      if (staleBanner) staleBanner.classList.add('hidden');
+
+      body.innerHTML = `
+        <div class="bg-slate-950/80 border border-indigo-500/30 rounded-xl p-5 space-y-2.5 animate-pulse">
+          <div class="text-xs font-bold text-indigo-300">🤖 누적된 대회 기록 ${raceHistory.length}건과 ${segments.length}개 구간 스플릿을 정밀 대조하고 있습니다...</div>
+          <div class="h-3 bg-slate-800 rounded w-3/4"></div>
+          <div class="h-3 bg-slate-800 rounded w-full"></div>
+          <div class="h-3 bg-slate-800 rounded w-5/6"></div>
+        </div>
+      `;
+
+      const prompt = buildAiEvaluationPrompt();
+
+      try {
+        let rawText = "";
+        let sourceLabel = "✨ Gemini 2.5 Flash 실시간 분석";
+
+        if (aiConfig.proxyUrl) {
+          sourceLabel = "✨ Gemini AI (프록시 연동)";
+          const res = await fetch(aiConfig.proxyUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'evaluate_plan', prompt })
+          });
+          if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
+          const data = await res.json();
+          rawText = data.text || data.reply || data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        } else {
+          const apiKey = aiConfig.apiKey || "";
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+          const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { responseMimeType: "application/json" }
+            })
+          });
+          if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
+          const data = await res.json();
+          rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        }
+
+        if (!rawText) throw new Error("Empty AI response");
+
+        const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
+        const parsed = JSON.parse(cleaned);
+        if (!parsed.realism || !parsed.risk || !parsed.action) throw new Error("Invalid JSON fields");
+
+        hasAiEvaluationResult = true;
+        renderAiEvaluationCards({
+          headline: parsed.headline || "AI 맞춤 레이스 전략 진단",
+          realism: parsed.realism,
+          risk: parsed.risk,
+          action: parsed.action,
+          sourceLabel
+        });
+        showToast("AI 세부 평가 리포트가 생성되었습니다!", "✨");
+      } catch (err) {
+        // Graceful offline/keyless fallback
+        const fallback = buildBuiltInDetailedFallback();
+        hasAiEvaluationResult = true;
+        renderAiEvaluationCards(fallback);
+        showToast("내장 정밀 분석 리포트로 세부 평가를 완료했습니다.", "📊");
+      } finally {
+        isAiEvaluating = false;
+        if (btn) {
+          btn.disabled = false;
+          btn.classList.remove('opacity-60', 'cursor-wait');
+          btn.innerHTML = `<span>✨ AI 세부 평가 받기</span>`;
+        }
+      }
+    }
+
+    // =====================================================
+    // 10. RACE HISTORY CRUD & RIEGEL EQUIVALENT PREDICTOR
+    // =====================================================
+    function updateAddPacePreview() {
+      const timeVal = document.getElementById('rc-time').value;
+      const typeVal = document.getElementById('rc-type').value;
+      const preview = document.getElementById('rc-pace-preview');
+      if (!preview) return;
+
+      const sec = parseTimeToSeconds(timeVal);
+      const dist = DIST_BY_TYPE[typeVal] || 10;
+      if (sec && sec >= 300) {
+        preview.className = "text-[11px] text-emerald-400 mt-1.5 font-bold min-h-[16px]";
+        preview.innerText = `자동 계산 평균 페이스: ${formatPace(sec / dist)}/km`;
+      } else {
+        preview.className = "text-[11px] text-slate-500 mt-1.5 font-semibold min-h-[16px]";
+        preview.innerText = "예: 4530 → 45:30 / 13520 → 1:35:20";
+      }
+    }
+
+    function updateEditPacePreview() {
+      const timeVal = document.getElementById('edit-rc-time').value;
+      const typeVal = document.getElementById('edit-rc-type').value;
+      const preview = document.getElementById('edit-rc-pace-preview');
+      if (!preview) return;
+
+      const sec = parseTimeToSeconds(timeVal);
+      const dist = DIST_BY_TYPE[typeVal] || 10;
+      preview.innerText = (sec && sec >= 300) ? `평균 페이스: ${formatPace(sec / dist)}/km` : '평균 페이스: -';
+    }
+
+    function addRaceRecord() {
+      const dateRaw = document.getElementById('rc-date').value.trim();
+      const type = document.getElementById('rc-type').value;
+      const name = document.getElementById('rc-name').value.trim();
+      const timeRaw = document.getElementById('rc-time').value.trim();
+      const hrRaw = document.getElementById('rc-hr').value.trim();
+      const note = document.getElementById('rc-note').value.trim();
+
+      if (!isValidDateString(dateRaw)) {
+        showToast("올바른 날짜(YYYY-MM-DD, 4자리 연도)를 입력해 주세요! (예: 20261011)", "⚠️");
+        document.getElementById('rc-date').focus();
+        return;
+      }
+      if (!name) {
+        showToast("대회명을 입력해 주세요!", "⚠️");
+        document.getElementById('rc-name').focus();
+        return;
+      }
+      const sec = parseTimeToSeconds(timeRaw);
+      if (!sec || sec < 300) {
+        showToast("올바른 완주 기록을 입력해 주세요! (예: 4530 또는 13520)", "⚠️");
+        document.getElementById('rc-time').focus();
+        return;
+      }
+
+      const hr = hrRaw ? parseInt(hrRaw, 10) : null;
+      const formattedTime = formatTimeCompact(sec);
+
+      raceHistory.unshift({
+        id: 'rc-' + Date.now(),
+        date: dateRaw,
+        type,
+        name,
+        time: formattedTime,
+        hr: (hr && hr >= 80 && hr <= 220) ? hr : null,
+        note
+      });
+
+      // Sort descending by date
+      raceHistory.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+      // Reset form inputs (keep date ready as today)
+      document.getElementById('rc-name').value = '';
+      document.getElementById('rc-time').value = '';
+      document.getElementById('rc-hr').value = '';
+      document.getElementById('rc-note').value = '';
+      updateAddPacePreview();
+
+      markAiEvaluationStale();
+      renderRaceHistory('ALL');
+      updateSimulationOutputs();
+      saveStateToLocalStorage();
+      showToast(`'${name}' (${type} ${formattedTime}) 기록이 등록되었습니다!`, "🏆");
+    }
+
+    function filterRaces(type) {
+      renderRaceHistory(type);
+    }
+
+    function renderRiegelPredictorCard() {
+      const card = document.getElementById('riegel-predictor-card');
+      const basisNote = document.getElementById('riegel-basis-note');
+      const grid = document.getElementById('riegel-predictor-grid');
+      if (!card || !grid) return;
+
+      const qualifying = getQualifyingRecords();
+      if (qualifying.length === 0) {
+        card.classList.add('hidden');
+        return;
+      }
+
+      const refBase = getBestBaselineForDist(21.0975);
+      card.classList.remove('hidden');
+      if (basisNote && refBase) {
+        basisNote.innerText = `기준: ${refBase.record.name} (${refBase.record.type} ${refBase.record.time}) · Riegel 지수 1.06 환산`;
+      }
+
+      const targets = [
+        { type: '5K', label: '5K (5.0 km)', dist: 5, color: 'text-sky-400' },
+        { type: '10K', label: '10K (10.0 km)', dist: 10, color: 'text-emerald-400' },
+        { type: 'Half', label: 'Half (21.1 km)', dist: 21.0975, color: 'text-indigo-400' },
+        { type: 'Full', label: 'Full (42.195 km)', dist: 42.195, color: 'text-amber-400' }
+      ];
+
+      grid.innerHTML = targets.map(t => {
+        const b = getBestBaselineForDist(t.dist);
+        const predSec = b.predictedSec;
+        const predTime = formatTimeCompact(predSec);
+        const predPace = formatPace(predSec / t.dist);
+        return `
+          <div class="bg-slate-950/85 p-3.5 rounded-xl border border-slate-800 flex justify-between items-center gap-2">
+            <div>
+              <div class="${t.color} font-bold text-[11px]">${t.label}</div>
+              <div class="text-white font-black text-base mt-0.5">${predTime}</div>
+              <div class="text-slate-400 text-[11px]">평균 ${predPace}/km</div>
+            </div>
+            <button type="button" onclick="applyPredictedToSimulator(${t.dist}, ${Math.round(predSec)})" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-[11px] shrink-0 transition">
+              시뮬 적용
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function applyPredictedToSimulator(dist, predSec) {
+      switchTab('simulator');
+      selectDistance(dist, false);
+      const revInput = document.getElementById('sim-reverse-time-input');
+      if (revInput) revInput.value = formatTimeCompact(predSec);
+      applyReverseTargetTime('negative');
+    }
+
+    function renderRaceHistory(filter = currentRaceFilter) {
+      currentRaceFilter = filter;
+      ['ALL', 'Full', 'Half', '10K', '5K'].forEach(f => {
+        const btn = document.getElementById(`race-filter-${f}`);
+        if (!btn) return;
+        btn.className = f === filter
+          ? "race-filter-btn px-2.5 py-1.5 bg-indigo-600 text-white rounded-lg font-bold transition"
+          : "race-filter-btn px-2.5 py-1.5 bg-slate-800 text-slate-300 rounded-lg font-bold hover:bg-slate-700 transition";
+      });
+
+      const listEl = document.getElementById('race-history-list');
+      if (!listEl) return;
+
+      const bestByType = {
+        Full: getBestPbSecondsByType('Full'),
+        Half: getBestPbSecondsByType('Half'),
+        '10K': getBestPbSecondsByType('10K'),
+        '5K': getBestPbSecondsByType('5K')
+      };
+
+      const filtered = filter === 'ALL' ? raceHistory : raceHistory.filter(r => r.type === filter);
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `
+          <div class="bg-slate-950/70 border border-dashed border-slate-800 rounded-xl p-8 text-center space-y-2">
+            <div class="text-3xl">🏅</div>
+            <div class="text-sm font-bold text-slate-300">${raceHistory.length === 0 ? '아직 등록된 대회 기록이 없습니다' : '선택한 종목의 기록이 없습니다'}</div>
+            <p class="text-xs text-slate-500">좌측 입력창에서 10K, 하프, 풀코스 기록을 등록하면 상단 PB 배지와 전략 평가가 자동으로 연동됩니다.</p>
+          </div>
+        `;
+      } else {
+        listEl.innerHTML = '';
+        filtered.forEach(r => {
+          const rSec = parseTimeToSeconds(r.time);
+          const dist = DIST_BY_TYPE[r.type] || 10;
+          const paceStr = rSec ? formatPace(rSec / dist) : '-';
+          const isPb = rSec && bestByType[r.type] === rSec;
+
+          const badgeColor = r.type === 'Full' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                           : r.type === 'Half' ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+                           : r.type === '10K' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                           : 'bg-sky-500/20 text-sky-300 border-sky-500/30';
+
+          const row = document.createElement('div');
+          row.className = `bg-slate-950/90 p-3.5 rounded-xl border ${isPb ? 'border-amber-500/50' : 'border-slate-800'} flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:border-slate-700 transition`;
+          row.innerHTML = `
+            <div class="space-y-1 min-w-0">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="px-2 py-0.5 text-[11px] font-extrabold rounded border ${badgeColor}">${r.type}</span>
+                ${isPb ? '<span class="px-2 py-0.5 text-[10px] font-black rounded bg-amber-500 text-slate-950">👑 PB</span>' : ''}
+                <span class="text-xs text-slate-400 font-semibold">${escapeHtml(r.date)}</span>
+                <span class="text-sm font-extrabold text-white break-words">${escapeHtml(r.name)}</span>
+              </div>
+              <div class="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                ${r.hr ? `<span class="text-rose-400 font-semibold">❤️ 평균 ${r.hr} bpm</span>` : ''}
+                ${r.note ? `<span>${escapeHtml(r.note)}</span>` : ''}
+              </div>
+            </div>
+            <div class="flex items-center gap-3 self-end sm:self-center shrink-0">
+              <div class="text-right">
+                <div class="text-base font-black text-white">${escapeHtml(r.time)}</div>
+                <div class="text-[11px] text-emerald-400 font-bold">${paceStr}/km</div>
+              </div>
+              <div class="flex items-center gap-1">
+                <button type="button" onclick="openRaceEditModal('${r.id}')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white text-xs font-bold transition" title="수정">
+                  ✏️
+                </button>
+                <button type="button" onclick="deleteRaceById('${r.id}')" class="px-2 py-1.5 rounded-lg bg-slate-900 hover:bg-rose-600 text-slate-400 hover:text-white text-xs font-bold transition" title="삭제">
+                  🗑️
+                </button>
+              </div>
+            </div>
+          `;
+          listEl.appendChild(row);
+        });
+      }
+
+      updateHeaderPbBadges();
+      renderRiegelPredictorCard();
+    }
+
+    function openRaceEditModal(id) {
+      const rec = raceHistory.find(r => r.id === id);
+      if (!rec) return;
+      document.getElementById('edit-rc-id').value = rec.id;
+      document.getElementById('edit-rc-date').value = normalizeDateString(rec.date);
+      document.getElementById('edit-rc-type').value = rec.type;
+      document.getElementById('edit-rc-name').value = rec.name;
+      document.getElementById('edit-rc-time').value = rec.time;
+      document.getElementById('edit-rc-hr').value = rec.hr || '';
+      document.getElementById('edit-rc-note').value = rec.note || '';
+      updateEditPacePreview();
+      document.getElementById('race-edit-modal').classList.remove('hidden');
+    }
+
+    function closeRaceEditModal() {
+      closeCalendarPopup();
+      document.getElementById('race-edit-modal').classList.add('hidden');
+    }
+
+    function saveRaceEdit() {
+      const id = document.getElementById('edit-rc-id').value;
+      const idx = raceHistory.findIndex(r => r.id === id);
+      if (idx === -1) return;
+
+      const date = document.getElementById('edit-rc-date').value.trim();
+      const type = document.getElementById('edit-rc-type').value;
+      const name = document.getElementById('edit-rc-name').value.trim();
+      const timeRaw = document.getElementById('edit-rc-time').value.trim();
+      const hrRaw = document.getElementById('edit-rc-hr').value.trim();
+      const note = document.getElementById('edit-rc-note').value.trim();
+
+      if (!isValidDateString(date)) {
+        showToast("올바른 날짜(YYYY-MM-DD, 4자리 연도)를 입력해 주세요!", "⚠️");
+        return;
+      }
+      const sec = parseTimeToSeconds(timeRaw);
+      if (!name || !sec || sec < 300) {
+        showToast("대회명과 올바른 기록을 입력해 주세요!", "⚠️");
+        return;
+      }
+
+      const hr = hrRaw ? parseInt(hrRaw, 10) : null;
+      raceHistory[idx] = {
+        id,
+        date,
+        type,
+        name,
+        time: formatTimeCompact(sec),
+        hr: (hr && hr >= 80 && hr <= 220) ? hr : null,
+        note
+      };
+      raceHistory.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+      closeRaceEditModal();
+      markAiEvaluationStale();
+      renderRaceHistory(currentRaceFilter);
+      updateSimulationOutputs();
+      saveStateToLocalStorage();
+      showToast(`'${name}' 기록이 수정되었습니다!`, "✏️");
+    }
+
+    function deleteRaceById(id) {
+      const idx = raceHistory.findIndex(r => r.id === id);
+      if (idx === -1) return;
+      const removed = raceHistory.splice(idx, 1)[0];
+      markAiEvaluationStale();
+      renderRaceHistory(currentRaceFilter);
+      updateSimulationOutputs();
+      saveStateToLocalStorage();
+      showToast(`'${removed.name}' 기록이 삭제되었습니다.`, "🗑️");
+    }
+
+    function deleteRaceFromModal() {
+      const id = document.getElementById('edit-rc-id').value;
+      closeRaceEditModal();
+      if (id) deleteRaceById(id);
+    }
+
+    // =====================================================
+    // 11. LOCAL STORAGE PERSISTENCE & JSON BACKUP / RESTORE
+    // =====================================================
+    function saveStateToLocalStorage() {
+      try {
+        const payload = {
+          currentRaceDist,
+          segments,
+          targetRaceInfo,
+          savedPlans,
+          raceHistory
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch (e) {
+        // Ignore storage quota errors
+      }
+    }
+
+    function loadStateFromLocalStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed.currentRaceDist) currentRaceDist = parsed.currentRaceDist;
+        if (Array.isArray(parsed.segments) && parsed.segments.length > 0) {
+          segments = parsed.segments.slice(0, MAX_SEGMENTS);
+        }
+        if (parsed.targetRaceInfo) targetRaceInfo = parsed.targetRaceInfo;
+        if (Array.isArray(parsed.savedPlans)) savedPlans = parsed.savedPlans;
+        if (Array.isArray(parsed.raceHistory)) {
+          raceHistory = parsed.raceHistory.map(r => ({
+            ...r,
+            date: normalizeDateString(r.date)
+          }));
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+
+    function exportAllDataJson() {
+      const payload = {
+        app: "RacePlanner",
+        version: 2,
+        exportedAt: new Date().toISOString(),
+        currentRaceDist,
+        segments,
+        targetRaceInfo,
+        savedPlans,
+        raceHistory
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `race_planner_backup_${getTodayDateString()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("레이스 플래너 데이터가 JSON 파일로 백업되었습니다!", "📤");
+    }
+
+    function importAllDataJson(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (parsed.currentRaceDist) currentRaceDist = parsed.currentRaceDist;
+          if (Array.isArray(parsed.segments) && parsed.segments.length > 0) {
+            segments = parsed.segments.slice(0, MAX_SEGMENTS);
+          }
+          if (parsed.targetRaceInfo) targetRaceInfo = parsed.targetRaceInfo;
+          if (Array.isArray(parsed.savedPlans)) savedPlans = parsed.savedPlans;
+          if (Array.isArray(parsed.raceHistory)) {
+            raceHistory = parsed.raceHistory.map(r => ({
+              ...r,
+              date: normalizeDateString(r.date)
+            }));
+          }
+          saveStateToLocalStorage();
+          updateHeaderDdayBadge();
+          renderSavedPlans();
+          renderRaceHistory('ALL');
+          selectDistance(currentRaceDist, true);
+          showToast("백업 파일에서 데이터를 성공적으로 복원했습니다!", "📥");
+        } catch (err) {
+          showToast("올바른 백업 파일(.json)이 아닙니다.", "⚠️");
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    // =====================================================
+    // 12. PWA INSTALLABILITY & OFFLINE SUPPORT
+    // =====================================================
+    let deferredInstallPrompt = null;
+
+    function isStandalonePwa() {
+      return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    }
+
+    function detectUserPlatform() {
+      const ua = navigator.userAgent || '';
+      const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isAndroid = /Android/i.test(ua);
+      const isInApp = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\/|wv\)/i.test(ua);
+      const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(ua);
+      return { isIOS, isAndroid, isInApp, isSafari, isDesktop: !isIOS && !isAndroid };
+    }
+
+    // Generates crisp high-resolution PNG app icons on an offscreen Canvas
+    function renderPwaIconCanvas(size) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      // Deep dark background
+      ctx.fillStyle = '#0b0f19';
+      ctx.fillRect(0, 0, size, size);
+
+      // Rounded Indigo-to-Emerald Gradient Emblem
+      const pad = Math.round(size * 0.08);
+      const box = size - pad * 2;
+      const radius = Math.round(size * 0.22);
+
+      const grad = ctx.createLinearGradient(pad, pad, size - pad, size - pad);
+      grad.addColorStop(0, '#6366f1');
+      grad.addColorStop(0.55, '#4f46e5');
+      grad.addColorStop(1, '#10b981');
+
+      ctx.beginPath();
+      ctx.moveTo(pad + radius, pad);
+      ctx.lineTo(pad + box - radius, pad);
+      ctx.quadraticCurveTo(pad + box, pad, pad + box, pad + radius);
+      ctx.lineTo(pad + box, pad + box - radius);
+      ctx.quadraticCurveTo(pad + box, pad + box, pad + box - radius, pad + box);
+      ctx.lineTo(pad + radius, pad + box);
+      ctx.quadraticCurveTo(pad, pad + box, pad, pad + box - radius);
+      ctx.lineTo(pad, pad + radius);
+      ctx.quadraticCurveTo(pad, pad, pad + radius, pad);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Subtle inner glossy ring
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+      ctx.lineWidth = Math.max(2, size * 0.018);
+      ctx.stroke();
+
+      // Speed arc accent near top
+      ctx.beginPath();
+      ctx.arc(size * 0.5, size * 0.5, size * 0.34, Math.PI * 1.15, Math.PI * 1.85);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.32)';
+      ctx.lineWidth = Math.max(3, size * 0.025);
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // Bold "RP" Monogram
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `900 ${Math.round(size * 0.38)}px Inter, -apple-system, BlinkMacSystemFont, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('RP', size * 0.5, size * 0.51);
+
+      // Subtle sub-label "PACE"
+      ctx.fillStyle = 'rgba(224, 231, 255, 0.9)';
+      ctx.font = `800 ${Math.round(size * 0.095)}px Inter, -apple-system, BlinkMacSystemFont, sans-serif`;
+      ctx.fillText('RACE PLANNER', size * 0.5, size * 0.77);
+
+      return canvas;
+    }
+
+    function buildPwaManifestObject(icon192Src = './icon-192.png', icon512Src = './icon-512.png') {
+      return {
+        name: "레이스 플래너 (Race Planner)",
+        short_name: "레이스 플래너",
+        description: "구간별 마라톤 페이스 시뮬레이터 & 내 대회 기록 기반 레이스 전략 평가",
+        start_url: "./index.html",
+        scope: "./",
+        display: "standalone",
+        orientation: "any",
+        background_color: "#0b0f19",
+        theme_color: "#0b0f19",
+        lang: "ko",
+        categories: ["sports", "fitness", "utilities"],
+        icons: [
+          { src: icon192Src, sizes: "192x192", type: "image/png", purpose: "any maskable" },
+          { src: icon512Src, sizes: "512x512", type: "image/png", purpose: "any maskable" }
+        ]
+      };
+    }
+
+    function updateOnlineStatusUI() {
+      const banner = document.getElementById('offline-banner');
+      if (!banner) return;
+      if (navigator.onLine) {
+        banner.classList.add('hidden');
+      } else {
+        banner.classList.remove('hidden');
+      }
+    }
+
+    function updateInstallButtonVisibility() {
+      const btn = document.getElementById('btn-pwa-install');
+      const footerBtn = document.getElementById('btn-pwa-install-footer');
+      const statusText = document.getElementById('pwa-status-text');
+      if (isStandalonePwa()) {
+        if (btn) btn.classList.add('hidden');
+        if (footerBtn) footerBtn.classList.add('hidden');
+        if (statusText) statusText.innerText = "📲 설치된 앱(PWA) 모드로 실행 중 · 오프라인 지원";
+      }
+    }
+
+    async function initPwaSystem() {
+      updateOnlineStatusUI();
+      updateInstallButtonVisibility();
+
+      window.addEventListener('online', () => {
+        updateOnlineStatusUI();
+        showToast("인터넷에 다시 연결되었습니다.", "🌐");
+      });
+      window.addEventListener('offline', () => {
+        updateOnlineStatusUI();
+        showToast("오프라인 상태입니다. 기기 저장 모드로 계속 사용할 수 있습니다.", "📴");
+      });
+
+      // Capture native install prompt on Chrome / Edge / Samsung Internet
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        const btn = document.getElementById('btn-pwa-install');
+        if (btn && !isStandalonePwa()) {
+          btn.classList.remove('hidden');
+        }
+      });
+
+      window.addEventListener('appinstalled', () => {
+        deferredInstallPrompt = null;
+        closePwaInstallModal();
+        const btn = document.getElementById('btn-pwa-install');
+        const footerBtn = document.getElementById('btn-pwa-install-footer');
+        if (btn) btn.classList.add('hidden');
+        if (footerBtn) footerBtn.classList.add('hidden');
+        showToast("레이스 플래너가 기기에 설치되었습니다!", "🎉");
+      });
+
+      // Generate fallback Canvas icons & dynamic manifest when static files aren't hosted yet (e.g. Preview)
+      try {
+        const icon192Data = renderPwaIconCanvas(192).toDataURL('image/png');
+        const icon512Data = renderPwaIconCanvas(512).toDataURL('image/png');
+
+        let hasStaticManifest = false;
+        if (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+          try {
+            const check = await fetch('./manifest.json', { cache: 'no-store' });
+            if (check.ok) hasStaticManifest = true;
+          } catch (e) {}
+        }
+
+        if (!hasStaticManifest) {
+          const fav = document.getElementById('pwa-favicon');
+          const appleIcon = document.getElementById('pwa-apple-icon');
+          if (fav) fav.href = icon192Data;
+          if (appleIcon) appleIcon.href = icon192Data;
+
+          const dynManifest = buildPwaManifestObject(icon192Data, icon512Data);
+          dynManifest.start_url = location.href;
+          const blob = new Blob([JSON.stringify(dynManifest)], { type: 'application/manifest+json' });
+          const manifestLink = document.getElementById('pwa-manifest-link');
+          if (manifestLink) manifestLink.href = URL.createObjectURL(blob);
+        }
+      } catch (e) {}
+
+      // Register Service Worker safely when hosted over HTTPS or localhost
+      if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+        navigator.serviceWorker.register('./sw.js', { scope: './' })
+          .then(() => {
+            const statusText = document.getElementById('pwa-status-text');
+            if (statusText && !isStandalonePwa()) {
+              statusText.innerText = "⚡ 오프라인 지원 PWA 활성화 · 기기 개별 저장";
+            }
+          })
+          .catch(() => {
+            // Silently ignore in sandboxed preview environments where ./sw.js does not exist
+          });
+      }
+    }
+
+    function openPwaInstallFlow() {
+      if (isStandalonePwa()) {
+        showToast("이미 앱으로 설치되어 실행 중입니다!", "✅");
+        return;
+      }
+
+      const platform = detectUserPlatform();
+      const inAppEl = document.getElementById('pwa-inapp-warning');
+      const nativeBox = document.getElementById('pwa-native-install-box');
+      const guideEl = document.getElementById('pwa-manual-guide');
+
+      if (inAppEl) inAppEl.classList.toggle('hidden', !platform.isInApp);
+      if (nativeBox) nativeBox.classList.toggle('hidden', !deferredInstallPrompt);
+
+      if (guideEl) {
+        if (platform.isIOS) {
+          guideEl.innerHTML = `
+            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 leading-relaxed">
+              <div class="font-extrabold text-indigo-300">🍎 아이폰 · 아이패드 (Safari) 설치 방법</div>
+              <ol class="list-decimal list-inside space-y-1.5 text-slate-300">
+                <li>하단(또는 상단) 메뉴에서 <strong>공유 버튼 (⬆️)</strong>을 누르세요.</li>
+                <li>메뉴를 아래로 내려 <strong>[홈 화면에 추가]</strong>를 선택하세요.</li>
+                <li>우측 상단 <strong>[추가]</strong>를 누르면 홈 화면에 앱 아이콘이 생성됩니다.</li>
+              </ol>
+            </div>
+          `;
+        } else if (platform.isAndroid) {
+          guideEl.innerHTML = `
+            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 leading-relaxed">
+              <div class="font-extrabold text-emerald-300">🤖 안드로이드 (Chrome / 삼성 인터넷) 설치 방법</div>
+              <ol class="list-decimal list-inside space-y-1.5 text-slate-300">
+                <li>브라우저 우측 상단 <strong>[⋮ 메뉴]</strong> 버튼을 누르세요.</li>
+                <li><strong>[앱 설치]</strong> 또는 <strong>[홈 화면에 추가]</strong>를 선택하세요.</li>
+                <li>설치를 누르면 일반 앱처럼 바탕화면과 앱 서랍에 추가됩니다.</li>
+              </ol>
+            </div>
+          `;
+        } else {
+          guideEl.innerHTML = `
+            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 leading-relaxed">
+              <div class="font-extrabold text-sky-300">💻 PC (Chrome / Edge) 설치 방법</div>
+              <ol class="list-decimal list-inside space-y-1.5 text-slate-300">
+                <li>브라우저 주소창 우측 끝의 <strong>[앱 설치 아이콘 (⊕ / 📥)]</strong>을 클릭하세요.</li>
+                <li>또는 우측 상단 <strong>[⋮ 메뉴] → [저장 및 공유] → [레이스 플래너 설치]</strong>를 선택하세요.</li>
+                <li>설치 후 독립된 앱 창과 바탕화면 바로가기로 실행할 수 있습니다.</li>
+              </ol>
+            </div>
+          `;
+        }
+      }
+
+      document.getElementById('pwa-install-modal').classList.remove('hidden');
+    }
+
+    function closePwaInstallModal() {
+      const modal = document.getElementById('pwa-install-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function triggerNativePwaInstall() {
+      if (!deferredInstallPrompt) {
+        showToast("브라우저 메뉴에서 '앱 설치' 또는 '홈 화면에 추가'를 선택해 주세요.", "📲");
+        return;
+      }
+      deferredInstallPrompt.prompt();
+      const choice = await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      if (choice && choice.outcome === 'accepted') {
+        closePwaInstallModal();
+        showToast("앱 설치가 시작되었습니다!", "🎉");
+      }
+    }
+
+    async function shareAppLink() {
+      const shareUrl = location.href;
+      const shareData = {
+        title: "레이스 플래너 (Race Planner)",
+        text: "구간별 마라톤 페이스 시뮬레이터 & 내 대회 기록 기반 전략 평가 앱",
+        url: shareUrl
+      };
+
+      if (navigator.share && /^https?:/.test(shareUrl)) {
+        try {
+          await navigator.share(shareData);
+          return;
+        } catch (e) {
+          if (e && e.name === 'AbortError') return;
+        }
+      }
+
+      const ta = document.createElement('textarea');
+      ta.value = shareUrl;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast("앱 링크가 복사되었습니다! 지인에게 붙여넣어 공유하세요.", "🔗");
+      } catch (err) {
+        showToast("주소창의 링크를 직접 복사해 공유해 주세요.", "🔗");
+      }
+      document.body.removeChild(ta);
+    }
+
+    // =====================================================
+    // 13. INITIALIZATION
+    // =====================================================
+    window.onload = function() {
+      initCalendarSelects();
+      loadAiSettings();
+      loadStateFromLocalStorage();
+      initPwaSystem();
+
+      // Pre-fill default race date input with today's date
+      const rcDateEl = document.getElementById('rc-date');
+      if (rcDateEl && !rcDateEl.value) {
+        rcDateEl.value = getTodayDateString();
+      }
+
+      updateHeaderDdayBadge();
+      renderSavedPlans();
+      renderRaceHistory('ALL');
+      selectDistance(currentRaceDist, true);
+    };
+  </script>
+</body>
+</html>
